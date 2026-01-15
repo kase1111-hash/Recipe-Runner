@@ -163,6 +163,59 @@ export async function clearImageCache(recipeId?: string): Promise<void> {
   }
 }
 
+export async function getStepImageVersions(
+  recipeId: string,
+  stepIndex: number
+): Promise<Array<{ version: number; image_data: string; created_at: string }>> {
+  const versions = await db.imageCache
+    .where('[recipe_id+step_index]')
+    .equals([recipeId, stepIndex])
+    .toArray();
+  return versions
+    .map(v => ({ version: v.version, image_data: v.image_data, created_at: v.created_at }))
+    .sort((a, b) => b.version - a.version);
+}
+
+export async function getCachedStepImageByVersion(
+  recipeId: string,
+  stepIndex: number,
+  version: number
+): Promise<string | null> {
+  const id = `${recipeId}_${stepIndex}_v${version}`;
+  const cached = await db.imageCache.get(id);
+  return cached?.image_data ?? null;
+}
+
+export async function getNextImageVersion(
+  recipeId: string,
+  stepIndex: number
+): Promise<number> {
+  const versions = await getStepImageVersions(recipeId, stepIndex);
+  if (versions.length === 0) return 1;
+  return Math.max(...versions.map(v => v.version)) + 1;
+}
+
+export async function getImageCacheStats(): Promise<{
+  totalImages: number;
+  totalSize: number;
+  byRecipe: Record<string, number>;
+}> {
+  const all = await db.imageCache.toArray();
+  const byRecipe: Record<string, number> = {};
+  let totalSize = 0;
+
+  for (const item of all) {
+    byRecipe[item.recipe_id] = (byRecipe[item.recipe_id] || 0) + 1;
+    totalSize += item.image_data.length;
+  }
+
+  return {
+    totalImages: all.length,
+    totalSize,
+    byRecipe,
+  };
+}
+
 // ============================================
 // User Preferences (localStorage)
 // ============================================

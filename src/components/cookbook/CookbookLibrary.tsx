@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, Button } from '../common';
+import { VisualSettings } from '../settings/VisualSettings';
 import { getAllCookbooks } from '../../db';
 import type { Cookbook } from '../../types';
 
@@ -21,6 +22,7 @@ const categoryIcons: Record<string, string> = {
 export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInventory }: CookbookLibraryProps) {
   const [cookbooks, setCookbooks] = useState<Cookbook[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showVisualSettings, setShowVisualSettings] = useState(false);
 
   useEffect(() => {
     loadCookbooks();
@@ -71,6 +73,9 @@ export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInv
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Button variant="ghost" onClick={() => setShowVisualSettings(true)} title="Visual Settings">
+            ⚙️
+          </Button>
           {onOpenInventory && (
             <Button variant="secondary" onClick={onOpenInventory}>
               Inventory
@@ -206,6 +211,11 @@ export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInv
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Visual Settings Modal */}
+      {showVisualSettings && (
+        <VisualSettings onClose={() => setShowVisualSettings(false)} />
       )}
     </div>
   );

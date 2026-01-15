@@ -1,0 +1,1 @@
+export { VisualSettings } from './VisualSettings';

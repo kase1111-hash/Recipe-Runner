@@ -1,7 +1,14 @@
 // AI Visual Generation Service
 // Phase 2 Core Feature - Step Visualization
+// Phase 8 Enhancement - Image caching, versioning, and prefetching
 
-import { getCachedStepImage, cacheStepImage } from '../db';
+import {
+  getCachedStepImage,
+  cacheStepImage,
+  getNextImageVersion,
+  getStepImageVersions,
+  getCachedStepImageByVersion,
+} from '../db';
 import type { VisualGenerationRequest, VisualGenerationResult, Step } from '../types';
 
 // ============================================
@@ -285,4 +292,197 @@ async function generateWithStabilityAI(prompt: string, config: ExternalImageAPIC
 
   const data = await response.json();
   return `data:image/png;base64,${data.artifacts[0].base64}`;
+}
+
+// ============================================
+// Phase 8: Regeneration with Versioning
+// ============================================
+
+/**
+ * Regenerate a new version of a step visual
+ * Stores the new version alongside existing versions
+ */
+export async function regenerateStepVisual(
+  request: VisualGenerationRequest
+): Promise<VisualGenerationResult> {
+  const { recipe_id, step_index, visual_prompt, style = 'realistic' } = request;
+
+  // Get the next version number
+  const nextVersion = await getNextImageVersion(recipe_id, step_index);
+
+  // Enhance the prompt for better results
+  const enhancedPrompt = enhanceVisualPrompt(visual_prompt, style);
+
+  try {
+    // Generate new image
+    const imageData = await generateWithOllama(enhancedPrompt);
+
+    // Cache with new version
+    await cacheStepImage(recipe_id, step_index, imageData, nextVersion);
+
+    return {
+      recipe_id,
+      step_index,
+      image_url: imageData,
+      cached: false,
+      version: nextVersion,
+    };
+  } catch (error) {
+    console.warn('Visual regeneration failed, using placeholder:', error);
+    return {
+      recipe_id,
+      step_index,
+      image_url: createPlaceholderImage(visual_prompt),
+      cached: false,
+      version: 0,
+    };
+  }
+}
+
+/**
+ * Get all generated versions for a step
+ */
+export async function getStepVisualVersions(
+  recipeId: string,
+  stepIndex: number
+): Promise<Array<{ version: number; image_url: string; created_at: string }>> {
+  const versions = await getStepImageVersions(recipeId, stepIndex);
+  return versions.map(v => ({
+    version: v.version,
+    image_url: v.image_data,
+    created_at: v.created_at,
+  }));
+}
+
+/**
+ * Get a specific version of a step visual
+ */
+export async function getStepVisualByVersion(
+  recipeId: string,
+  stepIndex: number,
+  version: number
+): Promise<VisualGenerationResult | null> {
+  const imageData = await getCachedStepImageByVersion(recipeId, stepIndex, version);
+  if (!imageData) return null;
+
+  return {
+    recipe_id: recipeId,
+    step_index: stepIndex,
+    image_url: imageData,
+    cached: true,
+    version,
+  };
+}
+
+// ============================================
+// Phase 8: Prefetching
+// ============================================
+
+/**
+ * Prefetch visuals for upcoming steps
+ * Generates images in the background for smoother UX
+ */
+export async function prefetchUpcomingSteps(
+  recipeId: string,
+  steps: Step[],
+  currentStepIndex: number,
+  prefetchCount: number = 2
+): Promise<void> {
+  const upcomingSteps = steps.slice(
+    currentStepIndex + 1,
+    currentStepIndex + 1 + prefetchCount
+  );
+
+  // Generate in parallel but don't wait for completion
+  for (const step of upcomingSteps) {
+    if (step.visual_prompt) {
+      // Fire and forget - cache in background
+      generateStepVisual({
+        recipe_id: recipeId,
+        step_index: step.index,
+        visual_prompt: step.visual_prompt,
+      }).catch(err => {
+        console.warn(`Prefetch failed for step ${step.index}:`, err);
+      });
+    }
+  }
+}
+
+/**
+ * Check if a step visual is cached
+ */
+export async function isStepVisualCached(
+  recipeId: string,
+  stepIndex: number
+): Promise<boolean> {
+  const cached = await getCachedStepImage(recipeId, stepIndex);
+  return cached !== null;
+}
+
+/**
+ * Get cache status for all steps in a recipe
+ */
+export async function getRecipeVisualCacheStatus(
+  recipeId: string,
+  steps: Step[]
+): Promise<Map<number, boolean>> {
+  const status = new Map<number, boolean>();
+
+  for (const step of steps) {
+    if (step.visual_prompt) {
+      const isCached = await isStepVisualCached(recipeId, step.index);
+      status.set(step.index, isCached);
+    }
+  }
+
+  return status;
+}
+
+// ============================================
+// Visual Settings (localStorage)
+// ============================================
+
+export interface VisualSettings {
+  enabled: boolean;
+  style: 'realistic' | 'illustrated';
+  autoGenerate: boolean;
+  prefetchEnabled: boolean;
+  prefetchCount: number;
+  apiProvider: 'local' | 'openai' | 'stability';
+  apiKey?: string;
+}
+
+const VISUAL_SETTINGS_KEY = 'recipe_runner_visual_settings';
+
+const defaultVisualSettings: VisualSettings = {
+  enabled: true,
+  style: 'realistic',
+  autoGenerate: true,
+  prefetchEnabled: true,
+  prefetchCount: 2,
+  apiProvider: 'local',
+};
+
+export function getVisualSettings(): VisualSettings {
+  try {
+    const stored = localStorage.getItem(VISUAL_SETTINGS_KEY);
+    if (stored) {
+      return { ...defaultVisualSettings, ...JSON.parse(stored) };
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return defaultVisualSettings;
+}
+
+export function saveVisualSettings(settings: Partial<VisualSettings>): VisualSettings {
+  const current = getVisualSettings();
+  const updated = { ...current, ...settings };
+  localStorage.setItem(VISUAL_SETTINGS_KEY, JSON.stringify(updated));
+  return updated;
+}
+
+export function resetVisualSettings(): VisualSettings {
+  localStorage.removeItem(VISUAL_SETTINGS_KEY);
+  return defaultVisualSettings;
 }
