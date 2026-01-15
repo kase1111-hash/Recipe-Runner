@@ -63,6 +63,7 @@ export function enhanceVisualPrompt(prompt: string, style: 'realistic' | 'illust
 /**
  * Generates an image for a recipe step using the visual prompt
  * First checks cache, then generates if needed
+ * Routes to the appropriate API based on user settings
  */
 export async function generateStepVisual(
   request: VisualGenerationRequest
@@ -81,11 +82,14 @@ export async function generateStepVisual(
     };
   }
 
+  // Get settings to determine which API to use
+  const settings = getVisualSettings();
+
   // Enhance the prompt for better results
   const enhancedPrompt = enhanceVisualPrompt(visual_prompt, style);
 
-  // Try Ollama with vision model first
-  const imageData = await generateWithOllama(enhancedPrompt);
+  // Generate image using selected provider
+  const imageData = await generateImage(enhancedPrompt, settings);
 
   // Cache the result
   await cacheStepImage(recipe_id, step_index, imageData);
@@ -97,6 +101,23 @@ export async function generateStepVisual(
     cached: false,
     version: 1,
   };
+}
+
+/**
+ * Route image generation to the appropriate API based on settings
+ */
+async function generateImage(prompt: string, settings: VisualSettings): Promise<string> {
+  switch (settings.apiProvider) {
+    case 'openai':
+      return await generateWithOpenAI(prompt, { type: 'openai', apiKey: settings.apiKey });
+    case 'stability':
+      return await generateWithStabilityAI(prompt, { type: 'stability', apiKey: settings.apiKey });
+    case 'sdwebui':
+      return await generateWithSDWebUI(prompt, settings.sdwebuiEndpoint || 'http://localhost:7860');
+    case 'local':
+    default:
+      return await generateWithOllama(prompt);
+  }
 }
 
 /**
@@ -208,56 +229,172 @@ export async function generateWithExternalAPI(
   }
 }
 
-async function generateWithOpenAI(prompt: string, config: ExternalImageAPIConfig): Promise<string> {
-  if (!config.apiKey) throw new Error('OpenAI API key required');
-
-  const response = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'dall-e-3',
-      prompt: prompt,
-      n: 1,
-      size: '1024x1024',
-      response_format: 'b64_json',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
+async function generateWithOpenAI(prompt: string, apiConfig: ExternalImageAPIConfig): Promise<string> {
+  if (!apiConfig.apiKey) {
+    throw new Error('OpenAI API key required. Go to Settings > Visual Generation and enter your API key.');
   }
 
-  const data = await response.json();
-  return `data:image/png;base64,${data.data[0].b64_json}`;
+  try {
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiConfig.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'dall-e-3',
+        prompt: prompt,
+        n: 1,
+        size: '1024x1024',
+        response_format: 'b64_json',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error?.message || `Status ${response.status}`;
+
+      if (response.status === 401) {
+        throw new Error('Invalid OpenAI API key. Please check your API key in Settings.');
+      }
+      if (response.status === 429) {
+        throw new Error('OpenAI rate limit exceeded. Please wait and try again, or check your billing.');
+      }
+      if (response.status === 400) {
+        throw new Error(`OpenAI rejected the prompt: ${errorMessage}`);
+      }
+      throw new Error(`OpenAI API error: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+    if (!data.data?.[0]?.b64_json) {
+      throw new Error('No image data returned from OpenAI');
+    }
+    return `data:image/png;base64,${data.data[0].b64_json}`;
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('fetch')) {
+      throw new Error('Cannot connect to OpenAI. Check your internet connection.');
+    }
+    throw err;
+  }
 }
 
-async function generateWithStabilityAI(prompt: string, config: ExternalImageAPIConfig): Promise<string> {
-  if (!config.apiKey) throw new Error('Stability AI API key required');
-
-  const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      text_prompts: [{ text: prompt }],
-      cfg_scale: 7,
-      height: 1024,
-      width: 1024,
-      samples: 1,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Stability AI API error: ${response.status}`);
+async function generateWithStabilityAI(prompt: string, apiConfig: ExternalImageAPIConfig): Promise<string> {
+  if (!apiConfig.apiKey) {
+    throw new Error('Stability AI API key required. Go to Settings > Visual Generation and enter your API key.');
   }
 
-  const data = await response.json();
-  return `data:image/png;base64,${data.artifacts[0].base64}`;
+  try {
+    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiConfig.apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        text_prompts: [{ text: prompt, weight: 1 }],
+        cfg_scale: 7,
+        height: 1024,
+        width: 1024,
+        samples: 1,
+        steps: 30,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.message || `Status ${response.status}`;
+
+      if (response.status === 401) {
+        throw new Error('Invalid Stability AI API key. Please check your API key in Settings.');
+      }
+      if (response.status === 402) {
+        throw new Error('Stability AI credits exhausted. Please add credits to your account.');
+      }
+      if (response.status === 429) {
+        throw new Error('Stability AI rate limit exceeded. Please wait and try again.');
+      }
+      throw new Error(`Stability AI error: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+    if (!data.artifacts?.[0]?.base64) {
+      throw new Error('No image data returned from Stability AI');
+    }
+    return `data:image/png;base64,${data.artifacts[0].base64}`;
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('fetch')) {
+      throw new Error('Cannot connect to Stability AI. Check your internet connection.');
+    }
+    throw err;
+  }
+}
+
+/**
+ * Generate image using Stable Diffusion WebUI (AUTOMATIC1111) API
+ * Runs locally on port 7860 by default
+ */
+async function generateWithSDWebUI(prompt: string, endpoint: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000); // 2 minute timeout for local generation
+
+  try {
+    // Add negative prompt to avoid common issues
+    const negativePrompt = 'blurry, low quality, distorted, deformed, ugly, bad anatomy, watermark, text, signature';
+
+    const response = await fetch(`${endpoint}/sdapi/v1/txt2img`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+        negative_prompt: negativePrompt,
+        steps: 25,
+        width: 512,
+        height: 512,
+        cfg_scale: 7,
+        sampler_name: 'DPM++ 2M Karras',
+        batch_size: 1,
+        n_iter: 1,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+
+      if (response.status === 404) {
+        throw new Error(`SD WebUI API not found at ${endpoint}. Make sure the API is enabled (--api flag).`);
+      }
+      if (response.status === 503) {
+        throw new Error('SD WebUI is busy generating another image. Please wait and try again.');
+      }
+      throw new Error(`SD WebUI error (${response.status}): ${errorText || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.images || !data.images[0]) {
+      throw new Error('No image data returned from SD WebUI');
+    }
+
+    return `data:image/png;base64,${data.images[0]}`;
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.name === 'AbortError') {
+        throw new Error(`Generation timed out after 2 minutes. The model may be loading or your GPU may be slow.`);
+      }
+      if (err.message.includes('fetch') || err.message.includes('Failed to fetch')) {
+        throw new Error(`Cannot connect to SD WebUI at ${endpoint}. Make sure it's running with --api flag.`);
+      }
+      throw err;
+    }
+    throw new Error(`SD WebUI generation failed: ${String(err)}`);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ============================================
@@ -276,11 +413,14 @@ export async function regenerateStepVisual(
   // Get the next version number
   const nextVersion = await getNextImageVersion(recipe_id, step_index);
 
+  // Get settings to determine which API to use
+  const settings = getVisualSettings();
+
   // Enhance the prompt for better results
   const enhancedPrompt = enhanceVisualPrompt(visual_prompt, style);
 
-  // Generate new image - let errors propagate
-  const imageData = await generateWithOllama(enhancedPrompt);
+  // Generate new image using selected provider
+  const imageData = await generateImage(enhancedPrompt, settings);
 
   // Cache with new version
   await cacheStepImage(recipe_id, step_index, imageData, nextVersion);
@@ -403,8 +543,9 @@ export interface VisualSettings {
   autoGenerate: boolean;
   prefetchEnabled: boolean;
   prefetchCount: number;
-  apiProvider: 'local' | 'openai' | 'stability';
+  apiProvider: 'local' | 'sdwebui' | 'openai' | 'stability';
   apiKey?: string;
+  sdwebuiEndpoint?: string;
 }
 
 const VISUAL_SETTINGS_KEY = 'recipe_runner_visual_settings';
@@ -416,6 +557,7 @@ const defaultVisualSettings: VisualSettings = {
   prefetchEnabled: true,
   prefetchCount: 2,
   apiProvider: 'local',
+  sdwebuiEndpoint: 'http://localhost:7860',
 };
 
 export function getVisualSettings(): VisualSettings {
