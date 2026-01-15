@@ -74,7 +74,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'var(--overlay-bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -85,7 +85,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
     >
       <div
         style={{
-          background: 'white',
+          background: 'var(--card-bg)',
           borderRadius: '0.75rem',
           width: '100%',
           maxWidth: '500px',
@@ -98,17 +98,17 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
         <div
           style={{
             padding: '1rem 1.5rem',
-            borderBottom: '1px solid #e5e7eb',
+            borderBottom: '1px solid var(--border-primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             position: 'sticky',
             top: 0,
-            background: 'white',
+            background: 'var(--card-bg)',
             zIndex: 1,
           }}
         >
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
             Visual Generation Settings
           </h2>
           <button
@@ -118,10 +118,10 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
               border: 'none',
               fontSize: '1.25rem',
               cursor: 'pointer',
-              color: '#6b7280',
+              color: 'var(--text-tertiary)',
             }}
           >
-            x
+            ×
           </button>
         </div>
 
@@ -133,11 +133,11 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                 type="checkbox"
                 checked={settings.enabled}
                 onChange={(e) => handleChange('enabled', e.target.checked)}
-                style={{ width: '1.25rem', height: '1.25rem' }}
+                style={{ width: '1.25rem', height: '1.25rem', accentColor: 'var(--accent-primary)' }}
               />
               <div>
-                <div style={{ fontWeight: 500 }}>Enable Visual Generation</div>
-                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Enable Visual Generation</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
                   Show AI-generated visuals for recipe steps
                 </div>
               </div>
@@ -148,7 +148,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
             <>
               {/* Style Selection */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontWeight: 500, marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontWeight: 500, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                   Visual Style
                 </label>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -157,30 +157,30 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      border: settings.style === 'realistic' ? '2px solid #2563eb' : '1px solid #d1d5db',
+                      border: settings.style === 'realistic' ? '2px solid var(--accent-primary)' : '1px solid var(--border-secondary)',
                       borderRadius: '0.5rem',
-                      background: settings.style === 'realistic' ? '#eff6ff' : 'white',
+                      background: settings.style === 'realistic' ? 'var(--accent-light)' : 'var(--bg-secondary)',
                       cursor: 'pointer',
                     }}
                   >
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📷</div>
-                    <div style={{ fontWeight: 500 }}>Realistic</div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Photo-like images</div>
+                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Realistic</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Photo-like images</div>
                   </button>
                   <button
                     onClick={() => handleChange('style', 'illustrated')}
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      border: settings.style === 'illustrated' ? '2px solid #2563eb' : '1px solid #d1d5db',
+                      border: settings.style === 'illustrated' ? '2px solid var(--accent-primary)' : '1px solid var(--border-secondary)',
                       borderRadius: '0.5rem',
-                      background: settings.style === 'illustrated' ? '#eff6ff' : 'white',
+                      background: settings.style === 'illustrated' ? 'var(--accent-light)' : 'var(--bg-secondary)',
                       cursor: 'pointer',
                     }}
                   >
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🎨</div>
-                    <div style={{ fontWeight: 500 }}>Illustrated</div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Diagram style</div>
+                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Illustrated</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Diagram style</div>
                   </button>
                 </div>
               </div>
@@ -192,11 +192,11 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                     type="checkbox"
                     checked={settings.autoGenerate}
                     onChange={(e) => handleChange('autoGenerate', e.target.checked)}
-                    style={{ width: '1.25rem', height: '1.25rem' }}
+                    style={{ width: '1.25rem', height: '1.25rem', accentColor: 'var(--accent-primary)' }}
                   />
                   <div>
-                    <div style={{ fontWeight: 500 }}>Auto-Generate</div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Auto-Generate</div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
                       Automatically generate visuals when viewing steps
                     </div>
                   </div>
@@ -210,11 +210,11 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                     type="checkbox"
                     checked={settings.prefetchEnabled}
                     onChange={(e) => handleChange('prefetchEnabled', e.target.checked)}
-                    style={{ width: '1.25rem', height: '1.25rem' }}
+                    style={{ width: '1.25rem', height: '1.25rem', accentColor: 'var(--accent-primary)' }}
                   />
                   <div>
-                    <div style={{ fontWeight: 500 }}>Prefetch Upcoming Steps</div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Prefetch Upcoming Steps</div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
                       Generate visuals for next steps in background
                     </div>
                   </div>
@@ -222,7 +222,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
 
                 {settings.prefetchEnabled && (
                   <div style={{ marginTop: '0.75rem', marginLeft: '2rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>
                       Steps to prefetch: {settings.prefetchCount}
                     </label>
                     <input
@@ -231,7 +231,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                       max="5"
                       value={settings.prefetchCount}
                       onChange={(e) => handleChange('prefetchCount', parseInt(e.target.value))}
-                      style={{ width: '100%' }}
+                      style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
                     />
                   </div>
                 )}
@@ -239,7 +239,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
 
               {/* API Provider */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontWeight: 500, marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontWeight: 500, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                   Image Generation Provider
                 </label>
                 <select
@@ -248,19 +248,34 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--border-secondary)',
                     borderRadius: '0.375rem',
                     fontSize: '0.875rem',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-primary)',
                   }}
                 >
                   <option value="local">Local (Ollama/Stable Diffusion)</option>
-                  <option value="openai">OpenAI DALL-E</option>
-                  <option value="stability">Stability AI</option>
+                  <option value="openai">OpenAI DALL-E 3</option>
+                  <option value="stability">Stability AI (SDXL)</option>
                 </select>
+
+                {/* Provider info */}
+                <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                  {settings.apiProvider === 'local' && (
+                    <>Requires Ollama running locally with an image generation model.</>
+                  )}
+                  {settings.apiProvider === 'openai' && (
+                    <>Uses DALL-E 3. Costs ~$0.04-0.08 per image. Get API key at platform.openai.com</>
+                  )}
+                  {settings.apiProvider === 'stability' && (
+                    <>Uses Stable Diffusion XL. Requires credits. Get API key at platform.stability.ai</>
+                  )}
+                </div>
 
                 {settings.apiProvider !== 'local' && (
                   <div style={{ marginTop: '0.75rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>
                       API Key
                     </label>
                     <input
@@ -271,11 +286,18 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                         fontSize: '0.875rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
                       }}
                     />
+                    {!settings.apiKey && (
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--warning)' }}>
+                        API key required for image generation
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -283,14 +305,14 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
           )}
 
           {/* Cache Management */}
-          <Card style={{ padding: '1rem', background: '#f9fafb', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, margin: '0 0 0.75rem' }}>
+          <Card style={{ padding: '1rem', background: 'var(--bg-secondary)', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, margin: '0 0 0.75rem', color: 'var(--text-primary)' }}>
               Image Cache
             </h3>
             {cacheStats && (
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem' }}>
-                <div><strong>{cacheStats.totalImages}</strong> cached images</div>
-                <div>Total size: <strong>{formatBytes(cacheStats.totalSize)}</strong></div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.75rem' }}>
+                <div><strong style={{ color: 'var(--text-secondary)' }}>{cacheStats.totalImages}</strong> cached images</div>
+                <div>Total size: <strong style={{ color: 'var(--text-secondary)' }}>{formatBytes(cacheStats.totalSize)}</strong></div>
               </div>
             )}
             <Button
@@ -309,7 +331,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
               Reset to Defaults
             </Button>
             <Button variant="primary" onClick={handleSave} style={{ flex: 1 }}>
-              {saved ? 'Saved!' : 'Save Settings'}
+              {saved ? '✓ Saved!' : 'Save Settings'}
             </Button>
           </div>
         </div>
