@@ -38,10 +38,15 @@ if %errorlevel% neq 0 (
     echo.
     echo ERROR: Python is not installed.
     echo.
-    echo Please install Python 3.10.6 from: https://www.python.org/downloads/release/python-3106/
-    echo IMPORTANT: Check "Add Python to PATH" during installation!
+    echo Please install Python 3.10.6 (REQUIRED - newer versions won't work!)
     echo.
-    echo After installing Python, run this installer again.
+    echo Download: https://www.python.org/ftp/python/3.10.6/python-3.10.6-amd64.exe
+    echo.
+    echo IMPORTANT during installation:
+    echo   [x] Check "Add Python to PATH"
+    echo   [x] Check "Install for all users" (optional)
+    echo.
+    echo After installing Python 3.10.6, run this installer again.
     echo.
     pause
     exit /b 1
@@ -49,23 +54,36 @@ if %errorlevel% neq 0 (
 for /f "tokens=*" %%i in ('python --version') do set PYTHON_VERSION=%%i
 echo        Python found: %PYTHON_VERSION%
 
-:: Check Python version (recommend 3.10.x)
+:: Check Python version - MUST be 3.10.x (PyTorch doesn't support 3.11+)
 python -c "import sys; exit(0 if sys.version_info[:2] == (3, 10) else 1)" >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
-    echo WARNING: Python 3.10.x is recommended for best compatibility.
-    echo          You have %PYTHON_VERSION%
-    echo          SD WebUI may still work, but 3.10.6 is ideal.
+    echo ================================================
+    echo    ERROR: Wrong Python Version!
+    echo ================================================
     echo.
-    choice /C YN /M "Continue anyway"
-    if errorlevel 2 (
-        echo.
-        echo Download Python 3.10.6 from:
-        echo https://www.python.org/downloads/release/python-3106/
-        echo.
-        pause
-        exit /b 1
-    )
+    echo    You have: %PYTHON_VERSION%
+    echo    Required: Python 3.10.x
+    echo.
+    echo    SD WebUI requires Python 3.10 because PyTorch
+    echo    doesn't have packages for newer versions yet.
+    echo.
+    echo    Python 3.11, 3.12, 3.13, 3.14 will NOT work!
+    echo.
+    echo ================================================
+    echo.
+    echo To fix this:
+    echo   1. Uninstall your current Python (optional)
+    echo   2. Download Python 3.10.6:
+    echo      https://www.python.org/ftp/python/3.10.6/python-3.10.6-amd64.exe
+    echo   3. Install with "Add Python to PATH" checked
+    echo   4. Run this installer again
+    echo.
+    echo If you have multiple Python versions, you can set
+    echo the path manually in webui-user.bat after install.
+    echo.
+    pause
+    exit /b 1
 )
 echo.
 
