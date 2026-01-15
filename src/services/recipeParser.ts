@@ -10,6 +10,7 @@ import type {
   DifficultyScore,
   Source,
   SafeTemp,
+  CourseType,
 } from '../types';
 
 // ============================================
@@ -27,6 +28,8 @@ export interface ParsedRecipe {
   safe_temp?: SafeTemp | null;
   equipment: string[];
   tags: string[];
+  course_type?: CourseType | null;  // Recipe classification
+  cuisine?: string | null;  // Cuisine type (e.g., "Italian", "Asian")
   ingredients: Ingredient[];
   steps: Step[];
   notes: string;
@@ -483,6 +486,8 @@ export function createRecipeFromParsed(
     safe_temp: parsed.safe_temp,
     equipment: parsed.equipment,
     tags: parsed.tags,
+    course_type: parsed.course_type,
+    cuisine: parsed.cuisine,
     source: parsed.source,
     ingredients: parsed.ingredients,
     steps: parsed.steps,

@@ -6,7 +6,28 @@ import {
   type ParsedRecipe,
 } from '../../services/recipeParser';
 import { createRecipe } from '../../db';
-import type { Cookbook, Ingredient, Step, DifficultyScore } from '../../types';
+import type { Cookbook, Ingredient, Step, DifficultyScore, CourseType } from '../../types';
+import { CourseTypeLabels } from '../../types';
+import { getRecommendedCourseTypes } from '../../services/sideDishSuggestions';
+
+const CUISINE_OPTIONS = [
+  'American',
+  'Asian',
+  'Chinese',
+  'French',
+  'Greek',
+  'Indian',
+  'Italian',
+  'Japanese',
+  'Korean',
+  'Mediterranean',
+  'Mexican',
+  'Middle Eastern',
+  'Southern',
+  'Thai',
+  'Vietnamese',
+  'Other',
+];
 
 interface RecipeEditorProps {
   parsedRecipe: ParsedRecipe;
@@ -283,6 +304,86 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                 </div>
               </div>
             </div>
+          </Card>
+
+          {/* Classification Card */}
+          <Card>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151', marginBottom: '1rem' }}>
+              Classification
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                  Course Type
+                </label>
+                <select
+                  value={recipe.course_type || ''}
+                  onChange={(e) => updateRecipe({ course_type: (e.target.value as CourseType) || null })}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    background: 'white',
+                  }}
+                >
+                  <option value="">Select course type...</option>
+                  {(Object.keys(CourseTypeLabels) as CourseType[]).map((type) => (
+                    <option key={type} value={type}>
+                      {CourseTypeLabels[type].icon} {CourseTypeLabels[type].label}
+                    </option>
+                  ))}
+                </select>
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Helps with pairing suggestions and filtering
+                </p>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                  Cuisine
+                </label>
+                <select
+                  value={recipe.cuisine || ''}
+                  onChange={(e) => updateRecipe({ cuisine: e.target.value || null })}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    background: 'white',
+                  }}
+                >
+                  <option value="">Select cuisine...</option>
+                  {CUISINE_OPTIONS.map((cuisine) => (
+                    <option key={cuisine} value={cuisine}>
+                      {cuisine}
+                    </option>
+                  ))}
+                </select>
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Used for pairing complementary dishes
+                </p>
+              </div>
+            </div>
+            {/* Auto-detect suggestion */}
+            {!recipe.course_type && (
+              <div style={{ marginTop: '0.75rem' }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const suggestions = getRecommendedCourseTypes(recipe as any);
+                    if (suggestions.length > 0) {
+                      updateRecipe({ course_type: suggestions[0] });
+                    }
+                  }}
+                >
+                  Auto-detect course type
+                </Button>
+              </div>
+            )}
           </Card>
 
           <Card>

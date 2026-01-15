@@ -9,6 +9,7 @@ interface CookbookLibraryProps {
   onSelectCookbook: (cookbook: Cookbook) => void;
   onOpenMealPlanner?: () => void;
   onOpenInventory?: () => void;
+  onOpenBookshelf?: () => void;
 }
 
 const categoryIcons: Record<string, string> = {
@@ -20,7 +21,7 @@ const categoryIcons: Record<string, string> = {
   craft: '🛠️',
 };
 
-export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInventory }: CookbookLibraryProps) {
+export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInventory, onOpenBookshelf }: CookbookLibraryProps) {
   const [cookbooks, setCookbooks] = useState<Cookbook[]>([]);
   const [loading, setLoading] = useState(true);
   const [showVisualSettings, setShowVisualSettings] = useState(false);
@@ -78,6 +79,11 @@ export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInv
           <Button variant="ghost" onClick={() => setShowVisualSettings(true)} title="Visual Settings">
             ⚙️
           </Button>
+          {onOpenBookshelf && (
+            <Button variant="ghost" onClick={onOpenBookshelf} title="Organize Cookbooks">
+              📚 Bookshelf
+            </Button>
+          )}
           {onOpenInventory && (
             <Button variant="secondary" onClick={onOpenInventory}>
               Inventory
