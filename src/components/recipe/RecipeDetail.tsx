@@ -2,7 +2,7 @@
 // Phase 5 Feature - View recipe with cook history
 
 import { useState } from 'react';
-import { Button, Card, DifficultyBadge } from '../common';
+import { Button, Card, DifficultyBadge, NutritionDisplay } from '../common';
 import { exportRecipe, downloadAsFile, copyToClipboard } from '../../services/export';
 import type { Recipe } from '../../types';
 
@@ -302,6 +302,11 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
               </div>
             </Card>
           )}
+
+          {/* Nutrition */}
+          <div style={{ marginBottom: '1rem' }}>
+            <NutritionDisplay recipe={recipe} />
+          </div>
 
           {/* Steps Preview */}
           <Card style={{ padding: '1rem' }}>
