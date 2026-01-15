@@ -4,20 +4,25 @@ import { RecipeList } from './components/recipe/RecipeList';
 import { GroceryChecklist } from './components/recipe/GroceryChecklist';
 import { StepExecutor } from './components/step/StepExecutor';
 import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
+import { RecipeImport } from './components/import/RecipeImport';
+import { RecipeEditor } from './components/import/RecipeEditor';
 import { initializeDatabase } from './db';
 import { seedSampleData } from './data/sampleCookbook';
 import type { Cookbook, Recipe, Ingredient } from './types';
+import type { ParsedRecipe } from './services/recipeParser';
 
-type AppView = 'library' | 'cookbook' | 'groceries' | 'cooking' | 'complete';
+type AppView = 'library' | 'cookbook' | 'import' | 'edit' | 'groceries' | 'cooking' | 'complete';
 
 function App() {
   const [initialized, setInitialized] = useState(false);
   const [view, setView] = useState<AppView>('library');
   const [selectedCookbook, setSelectedCookbook] = useState<Cookbook | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [parsedRecipe, setParsedRecipe] = useState<ParsedRecipe | null>(null);
   const [checkedIngredients, setCheckedIngredients] = useState<string[]>([]);
   const [showChefOllama, setShowChefOllama] = useState(false);
   const [chefInitialMessage, setChefInitialMessage] = useState<string | undefined>();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Initialize database and seed sample data
   useEffect(() => {
@@ -56,6 +61,26 @@ function App() {
   function handleSelectRecipe(recipe: Recipe) {
     setSelectedRecipe(recipe);
     setView('groceries');
+  }
+
+  function handleStartImport() {
+    setView('import');
+  }
+
+  function handleImportComplete(parsed: ParsedRecipe) {
+    setParsedRecipe(parsed);
+    setView('edit');
+  }
+
+  function handleSaveRecipe() {
+    setParsedRecipe(null);
+    setRefreshKey(prev => prev + 1); // Trigger refresh of recipe list
+    setView('cookbook');
+  }
+
+  function handleCancelImport() {
+    setParsedRecipe(null);
+    setView('cookbook');
   }
 
   function handleGroceriesComplete(checked: string[]) {
@@ -107,9 +132,28 @@ function App() {
 
       {view === 'cookbook' && selectedCookbook && (
         <RecipeList
+          key={refreshKey}
           cookbook={selectedCookbook}
           onSelectRecipe={handleSelectRecipe}
+          onAddRecipe={handleStartImport}
           onBack={handleBackToLibrary}
+        />
+      )}
+
+      {view === 'import' && selectedCookbook && (
+        <RecipeImport
+          cookbook={selectedCookbook}
+          onImportComplete={handleImportComplete}
+          onCancel={handleCancelImport}
+        />
+      )}
+
+      {view === 'edit' && selectedCookbook && parsedRecipe && (
+        <RecipeEditor
+          parsedRecipe={parsedRecipe}
+          cookbook={selectedCookbook}
+          onSave={handleSaveRecipe}
+          onCancel={handleCancelImport}
         />
       )}
 
