@@ -70,7 +70,7 @@ const CATEGORY_KEYWORDS: Record<PantryCategory, string[]> = {
   other: [],
 };
 
-function detectCategory(itemName: string): PantryCategory {
+export function detectCategory(itemName: string): PantryCategory {
   const lower = itemName.toLowerCase();
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     if (category === 'other') continue;
