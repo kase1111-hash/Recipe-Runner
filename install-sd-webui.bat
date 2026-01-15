@@ -13,7 +13,7 @@ echo.
 set "INSTALL_PATH=C:\stable-diffusion-webui"
 
 :: Check for admin rights (optional but recommended)
-echo [1/5] Checking system requirements...
+echo [1/6] Checking system requirements...
 echo.
 
 :: Check if Git is installed
@@ -96,7 +96,7 @@ echo        Using: %PYTHON_CMD%
 echo.
 
 :: Check if already installed
-echo [2/5] Checking installation path...
+echo [2/6] Checking installation path...
 if exist "%INSTALL_PATH%\webui-user.bat" (
     echo.
     echo SD WebUI is already installed at: %INSTALL_PATH%
@@ -117,7 +117,7 @@ echo        Install path: %INSTALL_PATH%
 echo.
 
 :: Clone the repository (using Forge - faster and more maintained than original A1111)
-echo [3/5] Downloading Stable Diffusion WebUI Forge...
+echo [3/6] Downloading Stable Diffusion WebUI Forge...
 echo        (Forge is a faster, optimized fork of AUTOMATIC1111)
 echo        This may take a few minutes...
 echo.
@@ -138,8 +138,42 @@ echo.
 echo        Download complete!
 echo.
 
+:: Download a Stable Diffusion model
+echo [4/6] Downloading Stable Diffusion model...
+echo        (SD 1.5 - ~4GB download)
+echo.
+
+set "MODEL_PATH=%INSTALL_PATH%\models\Stable-diffusion"
+set "MODEL_FILE=%MODEL_PATH%\v1-5-pruned-emaonly.safetensors"
+set "MODEL_URL=https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors"
+
+if not exist "%MODEL_PATH%" mkdir "%MODEL_PATH%"
+
+if exist "%MODEL_FILE%" (
+    echo        Model already exists, skipping download.
+) else (
+    echo        Downloading from Hugging Face...
+    echo        This may take 10-20 minutes depending on your connection.
+    echo.
+    powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%MODEL_URL%' -OutFile '%MODEL_FILE%' -UseBasicParsing}"
+    if %errorlevel% neq 0 (
+        echo.
+        echo WARNING: Failed to download model automatically.
+        echo.
+        echo Please download manually:
+        echo   1. Go to: https://huggingface.co/runwayml/stable-diffusion-v1-5
+        echo   2. Download: v1-5-pruned-emaonly.safetensors
+        echo   3. Put it in: %MODEL_PATH%
+        echo.
+        echo Continuing with setup anyway...
+    ) else (
+        echo        Model downloaded successfully!
+    )
+)
+echo.
+
 :: Configure for API access
-echo [4/5] Configuring for Recipe Runner...
+echo [5/6] Configuring for Recipe Runner...
 echo.
 
 :: Create/modify webui-user.bat to include --api flag and Python path
@@ -169,7 +203,7 @@ echo        xformers optimization enabled
 echo.
 
 :: First run notice
-echo [5/5] Installation complete!
+echo [6/6] Installation complete!
 echo.
 echo ================================================
 echo    IMPORTANT: First Run Instructions
