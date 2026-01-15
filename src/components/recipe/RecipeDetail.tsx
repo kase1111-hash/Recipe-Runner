@@ -4,18 +4,21 @@
 import { useState } from 'react';
 import { Button, Card, DifficultyBadge, NutritionDisplay, CostDisplay, ShareButton } from '../common';
 import { DietaryWarnings } from './DietaryWarnings';
+import { SideDishSuggestions } from './SideDishSuggestions';
 import { exportRecipe, downloadAsFile, copyToClipboard } from '../../services/export';
 import type { Recipe, AdaptedRecipe } from '../../types';
+import { CourseTypeLabels } from '../../types';
 
 interface RecipeDetailProps {
   recipe: Recipe;
   onStartCooking: () => void;
   onBack: () => void;
+  onSelectSideDish?: (recipe: Recipe) => void;  // Optional callback for viewing side dish suggestions
 }
 
 type Tab = 'overview' | 'ingredients' | 'history';
 
-export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailProps) {
+export function RecipeDetail({ recipe, onStartCooking, onBack, onSelectSideDish }: RecipeDetailProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [showExport, setShowExport] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
@@ -68,9 +71,40 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
             >
               {recipe.name}
             </h1>
-            <p style={{ color: 'var(--text-tertiary)', margin: '0 0 1rem' }}>
+            <p style={{ color: 'var(--text-tertiary)', margin: '0 0 0.75rem' }}>
               {recipe.description}
             </p>
+
+            {/* Course Type & Cuisine Badges */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+              {recipe.course_type && CourseTypeLabels[recipe.course_type] && (
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    padding: '0.25rem 0.75rem',
+                    background: 'var(--accent-light)',
+                    borderRadius: '9999px',
+                    color: 'var(--accent-primary)',
+                    fontWeight: 500,
+                  }}
+                >
+                  {CourseTypeLabels[recipe.course_type].icon} {CourseTypeLabels[recipe.course_type].label}
+                </span>
+              )}
+              {recipe.cuisine && (
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    padding: '0.25rem 0.75rem',
+                    background: 'var(--info-bg)',
+                    borderRadius: '9999px',
+                    color: 'var(--accent-primary)',
+                  }}
+                >
+                  {recipe.cuisine}
+                </span>
+              )}
+            </div>
 
             {/* Quick Stats */}
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
@@ -156,6 +190,14 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
         recipe={recipe}
         onRecipeAdapted={setAdaptedRecipe}
       />
+
+      {/* Side Dish Suggestions for Main Courses */}
+      {onSelectSideDish && (
+        <SideDishSuggestions
+          recipe={recipe}
+          onSelectRecipe={onSelectSideDish}
+        />
+      )}
 
       {/* Tabs */}
       <div

@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, Button, DifficultyBadge, FavoriteButton } from '../common';
-import { getRecipesByCookbook } from '../../db';
-import type { Cookbook, Recipe } from '../../types';
+import { getRecipesByCookbook, getRecipeCountsByCourseType } from '../../db';
+import type { Cookbook, Recipe, CourseType } from '../../types';
+import { CourseTypeLabels } from '../../types';
 
 interface RecipeListProps {
   cookbook: Cookbook;
@@ -13,21 +14,36 @@ interface RecipeListProps {
 type FilterOption = 'all' | 'favorites' | 'recent';
 type SortOption = 'name' | 'difficulty' | 'time' | 'recent';
 
+const RECIPES_PER_PAGE = 50;
+
 export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: RecipeListProps) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterOption>('all');
   const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [courseTypeFilter, setCourseTypeFilter] = useState<CourseType | 'all'>('all');
+  const [courseTypeCounts, setCourseTypeCounts] = useState<Record<string, number>>({});
+  const [displayCount, setDisplayCount] = useState(RECIPES_PER_PAGE);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadRecipes();
   }, [cookbook.id]);
 
+  // Reset display count when filters change
+  useEffect(() => {
+    setDisplayCount(RECIPES_PER_PAGE);
+  }, [searchQuery, filter, sortBy, courseTypeFilter]);
+
   async function loadRecipes() {
     try {
-      const data = await getRecipesByCookbook(cookbook.id);
+      const [data, counts] = await Promise.all([
+        getRecipesByCookbook(cookbook.id),
+        getRecipeCountsByCourseType(cookbook.id),
+      ]);
       setRecipes(data);
+      setCourseTypeCounts(counts);
     } catch (error) {
       console.error('Failed to load recipes:', error);
     } finally {
@@ -35,9 +51,23 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
     }
   }
 
+  // Load more recipes when scrolling near bottom
+  const handleScroll = useCallback(() => {
+    if (!listRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+    if (scrollHeight - scrollTop - clientHeight < 200) {
+      setDisplayCount((prev) => prev + RECIPES_PER_PAGE);
+    }
+  }, []);
+
   // Filter and sort recipes
   const filteredRecipes = useMemo(() => {
     let result = [...recipes];
+
+    // Apply course type filter
+    if (courseTypeFilter !== 'all') {
+      result = result.filter((recipe) => recipe.course_type === courseTypeFilter);
+    }
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -47,7 +77,9 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
           recipe.name.toLowerCase().includes(query) ||
           recipe.description.toLowerCase().includes(query) ||
           recipe.tags.some((tag) => tag.toLowerCase().includes(query)) ||
-          recipe.ingredients.some((ing) => ing.item.toLowerCase().includes(query))
+          recipe.ingredients.some((ing) => ing.item.toLowerCase().includes(query)) ||
+          (recipe.cuisine && recipe.cuisine.toLowerCase().includes(query)) ||
+          (recipe.course_type && CourseTypeLabels[recipe.course_type]?.label.toLowerCase().includes(query))
       );
     }
 
@@ -89,7 +121,21 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
     });
 
     return result;
-  }, [recipes, searchQuery, filter, sortBy]);
+  }, [recipes, searchQuery, filter, sortBy, courseTypeFilter]);
+
+  // Paginated recipes for display
+  const displayedRecipes = useMemo(() => {
+    return filteredRecipes.slice(0, displayCount);
+  }, [filteredRecipes, displayCount]);
+
+  const hasMoreRecipes = displayCount < filteredRecipes.length;
+
+  // Get active course types for the filter UI
+  const activeCourseTypes = useMemo(() => {
+    return Object.entries(courseTypeCounts)
+      .filter(([key, count]) => key !== 'all' && count > 0)
+      .map(([key]) => key as CourseType);
+  }, [courseTypeCounts]);
 
   function handleFavoriteToggle(recipeId: string, newState: boolean) {
     setRecipes((prev) =>
@@ -178,6 +224,31 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
               ))}
             </div>
 
+            {/* Course Type Filter */}
+            <select
+              value={courseTypeFilter}
+              onChange={(e) => setCourseTypeFilter(e.target.value as CourseType | 'all')}
+              style={{
+                padding: '0.5rem 0.75rem',
+                border: '1px solid var(--input-border)',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                background: 'var(--input-bg)',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="all">All Types ({courseTypeCounts.all || 0})</option>
+              {activeCourseTypes.map((type) => (
+                <option key={type} value={type}>
+                  {CourseTypeLabels[type]?.icon} {CourseTypeLabels[type]?.label} ({courseTypeCounts[type] || 0})
+                </option>
+              ))}
+              {courseTypeCounts.uncategorized > 0 && (
+                <option value="uncategorized">Uncategorized ({courseTypeCounts.uncategorized})</option>
+              )}
+            </select>
+
             {/* Sort Dropdown */}
             <select
               value={sortBy}
@@ -203,6 +274,7 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
           <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             {filteredRecipes.length} of {recipes.length} recipes
             {searchQuery && ` matching "${searchQuery}"`}
+            {courseTypeFilter !== 'all' && ` in ${CourseTypeLabels[courseTypeFilter as CourseType]?.label || courseTypeFilter}`}
           </div>
         </Card>
       )}
@@ -227,18 +299,22 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
           <p style={{ color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
             Try adjusting your search or filters
           </p>
-          <Button variant="secondary" onClick={() => { setSearchQuery(''); setFilter('all'); }}>
+          <Button variant="secondary" onClick={() => { setSearchQuery(''); setFilter('all'); setCourseTypeFilter('all'); }}>
             Clear Filters
           </Button>
         </Card>
       ) : (
         <div
+          ref={listRef}
+          onScroll={handleScroll}
           style={{
             display: 'grid',
             gap: '1rem',
+            maxHeight: 'calc(100vh - 300px)',
+            overflowY: 'auto',
           }}
         >
-          {filteredRecipes.map((recipe) => (
+          {displayedRecipes.map((recipe) => (
             <Card
               key={recipe.id}
               hoverable
@@ -303,33 +379,76 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
                   <DifficultyBadge score={recipe.difficulty} />
                 </div>
               </div>
-              {recipe.tags.length > 0 && (
-                <div
-                  style={{
-                    marginTop: '0.75rem',
-                    display: 'flex',
-                    gap: '0.5rem',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  {recipe.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      style={{
-                        fontSize: '0.75rem',
-                        padding: '0.125rem 0.5rem',
-                        background: 'var(--bg-tertiary)',
-                        borderRadius: '9999px',
-                        color: 'var(--text-tertiary)',
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {/* Course Type and Tags */}
+              <div
+                style={{
+                  marginTop: '0.75rem',
+                  display: 'flex',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap',
+                }}
+              >
+                {/* Course Type Badge */}
+                {recipe.course_type && CourseTypeLabels[recipe.course_type] && (
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.125rem 0.5rem',
+                      background: 'var(--accent-light)',
+                      borderRadius: '9999px',
+                      color: 'var(--accent-primary)',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {CourseTypeLabels[recipe.course_type].icon} {CourseTypeLabels[recipe.course_type].label}
+                  </span>
+                )}
+                {/* Cuisine Badge */}
+                {recipe.cuisine && (
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.125rem 0.5rem',
+                      background: 'var(--info-bg)',
+                      borderRadius: '9999px',
+                      color: 'var(--accent-primary)',
+                    }}
+                  >
+                    {recipe.cuisine}
+                  </span>
+                )}
+                {/* Tags */}
+                {recipe.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.125rem 0.5rem',
+                      background: 'var(--bg-tertiary)',
+                      borderRadius: '9999px',
+                      color: 'var(--text-tertiary)',
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </Card>
           ))}
+
+          {/* Load More / Pagination Indicator */}
+          {hasMoreRecipes && (
+            <div
+              style={{
+                padding: '1rem',
+                textAlign: 'center',
+                color: 'var(--text-tertiary)',
+                fontSize: '0.875rem',
+              }}
+            >
+              Showing {displayedRecipes.length} of {filteredRecipes.length} recipes. Scroll for more...
+            </div>
+          )}
         </div>
       )}
     </div>

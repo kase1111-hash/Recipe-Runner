@@ -20,6 +20,39 @@ export type TimerState = 'idle' | 'running' | 'paused' | 'complete' | 'overtime'
 export type SourceType = 'book' | 'url' | 'original';
 
 // ============================================
+// Course Type Labels
+// ============================================
+
+export type CourseType =
+  | 'main_course'
+  | 'side_dish'
+  | 'appetizer'
+  | 'soup'
+  | 'salad'
+  | 'dessert'
+  | 'breakfast'
+  | 'beverage'
+  | 'snack'
+  | 'sauce'
+  | 'bread'
+  | 'base';  // For stocks, broths, foundational recipes
+
+export const CourseTypeLabels: Record<CourseType, { label: string; icon: string; description: string }> = {
+  main_course: { label: 'Main Course', icon: '🍖', description: 'Primary dish of a meal' },
+  side_dish: { label: 'Side Dish', icon: '🥗', description: 'Accompaniment to main course' },
+  appetizer: { label: 'Appetizer', icon: '🍤', description: 'Starter or small bite' },
+  soup: { label: 'Soup', icon: '🍲', description: 'Liquid-based dish' },
+  salad: { label: 'Salad', icon: '🥬', description: 'Mixed greens or vegetable dish' },
+  dessert: { label: 'Dessert', icon: '🍰', description: 'Sweet finishing course' },
+  breakfast: { label: 'Breakfast', icon: '🍳', description: 'Morning meal' },
+  beverage: { label: 'Beverage', icon: '🥤', description: 'Drink recipe' },
+  snack: { label: 'Snack', icon: '🥨', description: 'Light bite between meals' },
+  sauce: { label: 'Sauce', icon: '🫕', description: 'Condiment or topping' },
+  bread: { label: 'Bread', icon: '🍞', description: 'Baked bread or roll' },
+  base: { label: 'Base Recipe', icon: '🥣', description: 'Foundational recipe (stocks, broths)' },
+};
+
+// ============================================
 // Difficulty Scoring
 // ============================================
 
@@ -112,6 +145,8 @@ export interface Recipe {
   safe_temp?: SafeTemp | null;
   equipment: string[];
   tags: string[];
+  course_type?: CourseType | null;  // Recipe classification (main course, side dish, etc.)
+  cuisine?: string | null;  // Cuisine type for pairing suggestions (e.g., "Italian", "Asian")
   source: Source;
   ingredients: Ingredient[];
   steps: Step[];
@@ -129,9 +164,32 @@ export interface Cookbook {
   author: string;
   category: RecipeCategory;
   cover_image?: string;  // URL or base64
+  bookshelf_id?: string | null;  // Optional assignment to a bookshelf
   created_at: string;
   modified_at: string;
 }
+
+// ============================================
+// Bookshelf for Organizing Cookbooks
+// ============================================
+
+export interface Bookshelf {
+  id: string;
+  name: string;
+  description: string;
+  icon?: string;  // Emoji or icon identifier
+  color?: string;  // Theme color for the shelf
+  sort_order: number;  // Order in the bookshelf view
+  created_at: string;
+  modified_at: string;
+}
+
+export const DefaultBookshelves: Omit<Bookshelf, 'id' | 'created_at' | 'modified_at'>[] = [
+  { name: 'Favorites', description: 'Your most loved cookbooks', icon: '❤️', color: '#ef4444', sort_order: 0 },
+  { name: 'Weeknight Dinners', description: 'Quick and easy recipes for busy nights', icon: '🌙', color: '#8b5cf6', sort_order: 1 },
+  { name: 'Weekend Projects', description: 'More involved recipes for leisurely cooking', icon: '☀️', color: '#f59e0b', sort_order: 2 },
+  { name: 'Holiday & Special', description: 'Special occasion recipes', icon: '🎉', color: '#ec4899', sort_order: 3 },
+];
 
 // ============================================
 // App State Types

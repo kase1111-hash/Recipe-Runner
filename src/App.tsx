@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ThemeProvider, KeyboardShortcutsProvider } from './contexts';
 import { CookbookLibrary } from './components/cookbook/CookbookLibrary';
+import { BookshelfView } from './components/cookbook/BookshelfView';
 import { RecipeList, RecipeScaler, MiseEnPlace, CookCompletion, RecipeDetail } from './components/recipe';
 import { GroceryChecklist } from './components/recipe/GroceryChecklist';
 import { StepExecutor } from './components/step/StepExecutor';
@@ -9,13 +10,13 @@ import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
 import { MealPlanner, MealPlanGroceryList } from './components/mealplan';
 import { InventoryManager } from './components/inventory';
-import { initializeDatabase, getRecipe } from './db';
+import { initializeDatabase, getRecipe, getCookbook } from './db';
 import { seedSampleData } from './data/sampleCookbook';
 import type { Cookbook, Recipe, Ingredient } from './types';
 import type { ParsedRecipe } from './services/recipeParser';
 import type { ScaledRecipe } from './services/recipeScaling';
 
-type AppView = 'library' | 'cookbook' | 'detail' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete' | 'mealplanner' | 'mealplangroceries' | 'inventory';
+type AppView = 'library' | 'bookshelf' | 'cookbook' | 'detail' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete' | 'mealplanner' | 'mealplangroceries' | 'inventory';
 
 function App() {
   const [initialized, setInitialized] = useState(false);
@@ -203,6 +204,30 @@ function App() {
     setView('library');
   }
 
+  function handleOpenBookshelf() {
+    setView('bookshelf');
+  }
+
+  function handleBackFromBookshelf() {
+    setView('library');
+  }
+
+  function handleSelectCookbookFromBookshelf(cookbook: Cookbook) {
+    setSelectedCookbook(cookbook);
+    setView('cookbook');
+  }
+
+  // Handler for selecting a side dish suggestion
+  async function handleSelectSideDish(sideDishRecipe: Recipe) {
+    // Load the cookbook for the side dish
+    const cookbook = await getCookbook(sideDishRecipe.cookbook_id);
+    if (cookbook) {
+      setSelectedCookbook(cookbook);
+    }
+    setSelectedRecipe(sideDishRecipe);
+    setView('detail');
+  }
+
   return (
     <ThemeProvider>
       <KeyboardShortcutsProvider>
@@ -212,6 +237,14 @@ function App() {
           onSelectCookbook={handleSelectCookbook}
           onOpenMealPlanner={handleOpenMealPlanner}
           onOpenInventory={handleOpenInventory}
+          onOpenBookshelf={handleOpenBookshelf}
+        />
+      )}
+
+      {view === 'bookshelf' && (
+        <BookshelfView
+          onSelectCookbook={handleSelectCookbookFromBookshelf}
+          onBack={handleBackFromBookshelf}
         />
       )}
 
@@ -230,6 +263,7 @@ function App() {
           recipe={selectedRecipe}
           onStartCooking={handleStartCookingFromDetail}
           onBack={handleBackToCookbook}
+          onSelectSideDish={handleSelectSideDish}
         />
       )}
 

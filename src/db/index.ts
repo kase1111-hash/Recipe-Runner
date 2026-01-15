@@ -8,6 +8,8 @@ import type {
   CookingSession,
   UserPreferences,
   CookHistory,
+  Bookshelf,
+  CourseType,
 } from '../types';
 
 // ============================================
@@ -20,6 +22,7 @@ export class RecipeRunnerDB extends Dexie {
   cookingSessions!: Table<CookingSession>;
   cookHistory!: Table<CookHistory & { id: string; recipe_id: string }>;
   imageCache!: Table<{ id: string; recipe_id: string; step_index: number; image_data: string; version: number; created_at: string }>;
+  bookshelves!: Table<Bookshelf>;
 
   constructor() {
     super('RecipeRunnerDB');
@@ -30,6 +33,16 @@ export class RecipeRunnerDB extends Dexie {
       cookingSessions: 'recipeId, cookbookId, startedAt',
       cookHistory: 'id, recipe_id, date',
       imageCache: 'id, [recipe_id+step_index], created_at',
+    });
+
+    // Version 2: Add bookshelves, course_type indexing, and optimized indexes for large datasets
+    this.version(2).stores({
+      cookbooks: 'id, title, category, bookshelf_id, created_at, modified_at',
+      recipes: 'id, cookbook_id, name, course_type, cuisine, [cookbook_id+name], [cookbook_id+course_type], [course_type+cuisine], created_at, modified_at, favorite',
+      cookingSessions: 'recipeId, cookbookId, startedAt',
+      cookHistory: 'id, recipe_id, date',
+      imageCache: 'id, [recipe_id+step_index], created_at',
+      bookshelves: 'id, name, sort_order, created_at, modified_at',
     });
   }
 }
@@ -66,6 +79,59 @@ export async function deleteCookbook(id: string): Promise<void> {
   });
 }
 
+export async function getCookbooksByBookshelf(bookshelfId: string): Promise<Cookbook[]> {
+  return await db.cookbooks.where('bookshelf_id').equals(bookshelfId).toArray();
+}
+
+export async function getUnshelvdCookbooks(): Promise<Cookbook[]> {
+  return await db.cookbooks.filter((cb) => !cb.bookshelf_id).toArray();
+}
+
+// ============================================
+// Bookshelf Operations
+// ============================================
+
+export async function createBookshelf(bookshelf: Bookshelf): Promise<string> {
+  return await db.bookshelves.add(bookshelf);
+}
+
+export async function getBookshelf(id: string): Promise<Bookshelf | undefined> {
+  return await db.bookshelves.get(id);
+}
+
+export async function getAllBookshelves(): Promise<Bookshelf[]> {
+  return await db.bookshelves.orderBy('sort_order').toArray();
+}
+
+export async function updateBookshelf(id: string, updates: Partial<Bookshelf>): Promise<number> {
+  return await db.bookshelves.update(id, {
+    ...updates,
+    modified_at: new Date().toISOString(),
+  });
+}
+
+export async function deleteBookshelf(id: string): Promise<void> {
+  // Remove bookshelf_id from all associated cookbooks
+  await db.transaction('rw', [db.bookshelves, db.cookbooks], async () => {
+    const cookbooks = await db.cookbooks.where('bookshelf_id').equals(id).toArray();
+    for (const cookbook of cookbooks) {
+      await db.cookbooks.update(cookbook.id, { bookshelf_id: null });
+    }
+    await db.bookshelves.delete(id);
+  });
+}
+
+export async function reorderBookshelves(orderedIds: string[]): Promise<void> {
+  await db.transaction('rw', db.bookshelves, async () => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.bookshelves.update(orderedIds[i], {
+        sort_order: i,
+        modified_at: new Date().toISOString(),
+      });
+    }
+  });
+}
+
 // ============================================
 // Recipe Operations
 // ============================================
@@ -91,6 +157,115 @@ export async function updateRecipe(id: string, updates: Partial<Recipe>): Promis
 
 export async function deleteRecipe(id: string): Promise<void> {
   await db.recipes.delete(id);
+}
+
+// ============================================
+// Course Type & Filtering Operations
+// ============================================
+
+export async function getRecipesByCourseType(courseType: CourseType): Promise<Recipe[]> {
+  return await db.recipes.where('course_type').equals(courseType).toArray();
+}
+
+export async function getRecipesByCookbookAndCourseType(
+  cookbookId: string,
+  courseType: CourseType
+): Promise<Recipe[]> {
+  return await db.recipes
+    .where('[cookbook_id+course_type]')
+    .equals([cookbookId, courseType])
+    .toArray();
+}
+
+export async function getSideDishRecipes(): Promise<Recipe[]> {
+  return await db.recipes.where('course_type').equals('side_dish').toArray();
+}
+
+export async function getAllRecipes(): Promise<Recipe[]> {
+  return await db.recipes.toArray();
+}
+
+export async function getRecipesByIds(ids: string[]): Promise<Recipe[]> {
+  return await db.recipes.where('id').anyOf(ids).toArray();
+}
+
+/**
+ * Get recipes with pagination for handling large datasets
+ */
+export async function getRecipesPaginated(
+  cookbookId: string,
+  options: {
+    offset?: number;
+    limit?: number;
+    courseType?: CourseType | null;
+    sortBy?: 'name' | 'difficulty' | 'time' | 'recent';
+    sortDirection?: 'asc' | 'desc';
+  } = {}
+): Promise<{ recipes: Recipe[]; total: number }> {
+  const { offset = 0, limit = 50, courseType, sortBy = 'name', sortDirection = 'asc' } = options;
+
+  let collection = courseType
+    ? db.recipes.where('[cookbook_id+course_type]').equals([cookbookId, courseType])
+    : db.recipes.where('cookbook_id').equals(cookbookId);
+
+  const total = await collection.count();
+  let recipes = await collection.toArray();
+
+  // Apply sorting
+  recipes.sort((a, b) => {
+    let comparison = 0;
+    switch (sortBy) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name);
+        break;
+      case 'difficulty':
+        comparison = a.difficulty.overall - b.difficulty.overall;
+        break;
+      case 'time': {
+        const parseTime = (t: string) => {
+          const hours = t.match(/(\d+)\s*h/)?.[1] || '0';
+          const mins = t.match(/(\d+)\s*m/)?.[1] || '0';
+          return parseInt(hours) * 60 + parseInt(mins);
+        };
+        comparison = parseTime(a.total_time) - parseTime(b.total_time);
+        break;
+      }
+      case 'recent':
+        comparison = new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime();
+        break;
+    }
+    return sortDirection === 'desc' ? -comparison : comparison;
+  });
+
+  // Favorites always first
+  recipes.sort((a, b) => {
+    if (a.favorite && !b.favorite) return -1;
+    if (!a.favorite && b.favorite) return 1;
+    return 0;
+  });
+
+  // Apply pagination
+  return {
+    recipes: recipes.slice(offset, offset + limit),
+    total,
+  };
+}
+
+/**
+ * Get recipe counts by course type for a cookbook
+ */
+export async function getRecipeCountsByCourseType(
+  cookbookId: string
+): Promise<Record<string, number>> {
+  const recipes = await db.recipes.where('cookbook_id').equals(cookbookId).toArray();
+  const counts: Record<string, number> = { all: recipes.length };
+
+  for (const recipe of recipes) {
+    const type = recipe.course_type || 'uncategorized';
+    counts[type] = (counts[type] || 0) + 1;
+  }
+
+  return counts;
 }
 
 export async function addCookHistoryEntry(
