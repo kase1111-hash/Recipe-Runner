@@ -255,8 +255,8 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                     color: 'var(--text-primary)',
                   }}
                 >
-                  <option value="local">Local (Ollama) - Not recommended</option>
-                  <option value="sdwebui">Stable Diffusion WebUI (Local, Free)</option>
+                  <option value="sdwebui">Stable Diffusion WebUI (Local, Free) - Recommended</option>
+                  <option value="local">Ollama - Does NOT work (text only)</option>
                   <option value="openai">OpenAI DALL-E 3</option>
                   <option value="stability">Stability AI (SDXL)</option>
                 </select>
