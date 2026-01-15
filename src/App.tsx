@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { CookbookLibrary } from './components/cookbook/CookbookLibrary';
-import { RecipeList, RecipeScaler, MiseEnPlace } from './components/recipe';
+import { RecipeList, RecipeScaler, MiseEnPlace, CookCompletion, RecipeDetail } from './components/recipe';
 import { GroceryChecklist } from './components/recipe/GroceryChecklist';
 import { StepExecutor } from './components/step/StepExecutor';
 import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
 import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
-import { initializeDatabase } from './db';
+import { initializeDatabase, getRecipe } from './db';
 import { seedSampleData } from './data/sampleCookbook';
 import type { Cookbook, Recipe, Ingredient } from './types';
 import type { ParsedRecipe } from './services/recipeParser';
 import type { ScaledRecipe } from './services/recipeScaling';
 
-type AppView = 'library' | 'cookbook' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete';
+type AppView = 'library' | 'cookbook' | 'detail' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete';
 
 function App() {
   const [initialized, setInitialized] = useState(false);
@@ -62,7 +62,15 @@ function App() {
 
   function handleSelectRecipe(recipe: Recipe) {
     setSelectedRecipe(recipe);
+    setView('detail');
+  }
+
+  function handleStartCookingFromDetail() {
     setView('groceries');
+  }
+
+  function handleBackToDetail() {
+    setView('detail');
   }
 
   function handleStartImport() {
@@ -116,6 +124,22 @@ function App() {
     setView('complete');
   }
 
+  async function handleCompletionFinished() {
+    // Refresh the recipe to get updated cook history
+    if (selectedRecipe) {
+      const refreshed = await getRecipe(selectedRecipe.id);
+      if (refreshed) {
+        setSelectedRecipe(refreshed);
+      }
+    }
+    setCheckedIngredients([]);
+    handleBackToLibrary();
+  }
+
+  function handleCookAgain() {
+    setView('groceries');
+  }
+
   function handleOpenChefForIngredient(ingredient: Ingredient) {
     setChefInitialMessage(`I don't have ${ingredient.item}. What can I substitute?`);
     setShowChefOllama(true);
@@ -164,6 +188,14 @@ function App() {
         />
       )}
 
+      {view === 'detail' && selectedRecipe && (
+        <RecipeDetail
+          recipe={selectedRecipe}
+          onStartCooking={handleStartCookingFromDetail}
+          onBack={handleBackToCookbook}
+        />
+      )}
+
       {view === 'import' && selectedCookbook && (
         <RecipeImport
           cookbook={selectedCookbook}
@@ -185,7 +217,7 @@ function App() {
         <GroceryChecklist
           recipe={selectedRecipe}
           onComplete={handleGroceriesComplete}
-          onBack={handleBackToCookbook}
+          onBack={handleBackToDetail}
           onOpenChef={handleOpenChefForIngredient}
           onOpenScaler={handleOpenScaler}
         />
@@ -210,52 +242,12 @@ function App() {
       )}
 
       {view === 'complete' && selectedRecipe && (
-        <div
-          style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '2rem',
-          }}
-        >
-          <div
-            style={{
-              textAlign: 'center',
-              maxWidth: '400px',
-            }}
-          >
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-            <h1
-              style={{
-                fontSize: '2rem',
-                fontWeight: 700,
-                color: '#111827',
-                margin: '0 0 0.5rem',
-              }}
-            >
-              Recipe Complete!
-            </h1>
-            <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
-              You've finished making {selectedRecipe.name}. Enjoy your creation!
-            </p>
-            <button
-              onClick={handleBackToLibrary}
-              style={{
-                padding: '0.75rem 2rem',
-                fontSize: '1rem',
-                fontWeight: 600,
-                color: 'white',
-                background: '#2563eb',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-              }}
-            >
-              Back to Library
-            </button>
-          </div>
-        </div>
+        <CookCompletion
+          recipe={selectedRecipe}
+          checkedIngredients={checkedIngredients}
+          onComplete={handleCompletionFinished}
+          onCookAgain={handleCookAgain}
+        />
       )}
 
       {/* Recipe Scaler Modal */}
