@@ -39,31 +39,35 @@ for /f "tokens=*" %%i in ('npm -v') do set NPM_VERSION=%%i
 echo        npm v%NPM_VERSION% found.
 echo.
 
-:: Check and install dependencies
-echo [3/3] Checking dependencies...
+:: Install/update dependencies
+echo [3/3] Installing dependencies...
 if not exist "node_modules" (
-    echo        node_modules not found. Installing dependencies...
-    echo.
-    call npm install
-    if %errorlevel% neq 0 (
-        echo.
-        echo ERROR: Failed to install dependencies.
-        echo.
-        echo Possible causes:
-        echo   - No internet connection
-        echo   - npm registry is unreachable
-        echo   - Package.json has invalid dependencies
-        echo.
-        echo Try running 'npm install' manually to see detailed errors.
-        echo.
-        pause
-        exit /b 1
-    )
-    echo.
-    echo        Dependencies installed successfully.
+    echo        First run - installing all dependencies...
 ) else (
-    echo        Dependencies already installed.
+    echo        Checking for updates...
 )
+echo.
+call npm install
+if %errorlevel% neq 0 (
+    echo.
+    echo ERROR: Failed to install dependencies.
+    echo.
+    echo Possible causes:
+    echo   - No internet connection
+    echo   - npm registry is unreachable
+    echo   - Package.json has invalid dependencies
+    echo   - Insufficient disk space
+    echo.
+    echo Try these solutions:
+    echo   1. Check your internet connection
+    echo   2. Run 'npm cache clean --force' then try again
+    echo   3. Delete node_modules folder and try again
+    echo.
+    pause
+    exit /b 1
+)
+echo.
+echo        Dependencies ready.
 echo.
 
 :: Start the development server
