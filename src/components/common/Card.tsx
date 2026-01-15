@@ -1,9 +1,9 @@
-import type { ReactNode, CSSProperties } from 'react';
+import type { ReactNode, CSSProperties, MouseEvent } from 'react';
 
 interface CardProps {
   children: ReactNode;
   style?: CSSProperties;
-  onClick?: () => void;
+  onClick?: (e: MouseEvent<HTMLDivElement>) => void;
   hoverable?: boolean;
 }
 

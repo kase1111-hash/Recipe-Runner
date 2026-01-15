@@ -2,8 +2,9 @@
 // Shows recommended side dishes for main course recipes
 
 import { useState, useEffect } from 'react';
-import { Card, Button, DifficultyBadge } from '../common';
-import { getSideDishSuggestions, SideDishSuggestion } from '../../services/sideDishSuggestions';
+import { Card, Button } from '../common';
+import { getSideDishSuggestions } from '../../services/sideDishSuggestions';
+import type { SideDishSuggestion } from '../../services/sideDishSuggestions';
 import type { Recipe } from '../../types';
 import { CourseTypeLabels } from '../../types';
 
