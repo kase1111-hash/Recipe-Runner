@@ -1,0 +1,61 @@
+/* Recipe Runner - Base Styles */
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #333;
+  background-color: #fff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Responsive typography */
+@media (max-width: 480px) {
+  :root {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  :root {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 769px) {
+  :root {
+    font-size: 16px;
+  }
+}
