@@ -80,7 +80,7 @@ export function CookCompletion({
           alignItems: 'center',
           justifyContent: 'center',
           padding: '2rem',
-          background: '#f9fafb',
+          background: 'var(--bg-secondary)',
         }}
       >
         <Card style={{ maxWidth: '500px', textAlign: 'center', padding: '2rem' }}>
@@ -89,13 +89,13 @@ export function CookCompletion({
             style={{
               fontSize: '1.75rem',
               fontWeight: 700,
-              color: '#111827',
+              color: 'var(--text-primary)',
               margin: '0 0 0.5rem',
             }}
           >
             Great Job!
           </h1>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--text-tertiary)', marginBottom: '1.5rem' }}>
             You've completed {recipe.name}!
             {rating > 0 && ` You rated it ${rating}/5 stars.`}
           </p>
@@ -108,22 +108,22 @@ export function CookCompletion({
               gap: '2rem',
               marginBottom: '2rem',
               padding: '1rem',
-              background: '#f3f4f6',
+              background: 'var(--bg-tertiary)',
               borderRadius: '0.5rem',
             }}
           >
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {cookCount + 1}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Times Cooked</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Times Cooked</div>
             </div>
             {avgRating > 0 && (
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {avgRating.toFixed(1)}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Avg Rating</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Avg Rating</div>
               </div>
             )}
           </div>
@@ -146,7 +146,7 @@ export function CookCompletion({
       style={{
         minHeight: '100vh',
         padding: '2rem',
-        background: '#f9fafb',
+        background: 'var(--bg-secondary)',
       }}
     >
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
@@ -156,13 +156,13 @@ export function CookCompletion({
             style={{
               fontSize: '1.75rem',
               fontWeight: 700,
-              color: '#111827',
+              color: 'var(--text-primary)',
               margin: '0 0 0.5rem',
             }}
           >
             How Did It Go?
           </h1>
-          <p style={{ color: '#6b7280', margin: 0 }}>
+          <p style={{ color: 'var(--text-tertiary)', margin: 0 }}>
             Rate your experience making {recipe.name}
           </p>
         </header>
@@ -170,7 +170,7 @@ export function CookCompletion({
         {/* Completion Status */}
         <Card style={{ marginBottom: '1rem', padding: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontWeight: 600, color: '#374151' }}>Did you finish?</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Did you finish?</span>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <Button
                 variant={completed ? 'primary' : 'secondary'}
@@ -193,7 +193,7 @@ export function CookCompletion({
         {/* Rating */}
         <Card style={{ marginBottom: '1rem', padding: '1rem' }}>
           <div style={{ marginBottom: '0.5rem' }}>
-            <span style={{ fontWeight: 600, color: '#374151' }}>Your Rating</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Your Rating</span>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -215,7 +215,7 @@ export function CookCompletion({
             ))}
           </div>
           {rating > 0 && (
-            <div style={{ textAlign: 'center', marginTop: '0.5rem', color: '#6b7280' }}>
+            <div style={{ textAlign: 'center', marginTop: '0.5rem', color: 'var(--text-tertiary)' }}>
               {rating === 1 && 'Needs improvement'}
               {rating === 2 && 'Just okay'}
               {rating === 3 && 'Good'}
@@ -228,8 +228,8 @@ export function CookCompletion({
         {/* Adjustments */}
         <Card style={{ marginBottom: '1rem', padding: '1rem' }}>
           <div style={{ marginBottom: '0.75rem' }}>
-            <span style={{ fontWeight: 600, color: '#374151' }}>Adjustments Made</span>
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.25rem 0 0' }}>
+            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Adjustments Made</span>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', margin: '0.25rem 0 0' }}>
               Record any changes you made to the recipe
             </p>
           </div>
@@ -244,17 +244,17 @@ export function CookCompletion({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '0.5rem 0.75rem',
-                    background: '#f3f4f6',
+                    background: 'var(--bg-tertiary)',
                     borderRadius: '0.375rem',
                   }}
                 >
-                  <span style={{ fontSize: '0.875rem', color: '#374151' }}>{adj}</span>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{adj}</span>
                   <button
                     onClick={() => handleRemoveAdjustment(idx)}
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#9ca3af',
+                      color: 'var(--text-muted)',
                       cursor: 'pointer',
                       padding: '0.25rem',
                     }}
@@ -276,9 +276,11 @@ export function CookCompletion({
               style={{
                 flex: 1,
                 padding: '0.5rem 0.75rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--border-secondary)',
                 borderRadius: '0.375rem',
                 fontSize: '0.875rem',
+                background: 'var(--input-bg)',
+                color: 'var(--text-primary)',
               }}
             />
             <Button variant="secondary" size="sm" onClick={handleAddAdjustment}>
@@ -290,7 +292,7 @@ export function CookCompletion({
         {/* Notes */}
         <Card style={{ marginBottom: '1.5rem', padding: '1rem' }}>
           <div style={{ marginBottom: '0.5rem' }}>
-            <span style={{ fontWeight: 600, color: '#374151' }}>Notes</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Notes</span>
           </div>
           <textarea
             value={notes}
@@ -300,11 +302,13 @@ export function CookCompletion({
             style={{
               width: '100%',
               padding: '0.75rem',
-              border: '1px solid #d1d5db',
+              border: '1px solid var(--border-secondary)',
               borderRadius: '0.375rem',
               fontSize: '0.875rem',
               resize: 'vertical',
               fontFamily: 'inherit',
+              background: 'var(--input-bg)',
+              color: 'var(--text-primary)',
             }}
           />
         </Card>

@@ -84,31 +84,19 @@ export async function generateStepVisual(
   // Enhance the prompt for better results
   const enhancedPrompt = enhanceVisualPrompt(visual_prompt, style);
 
-  try {
-    // Try Ollama with vision model first
-    const imageData = await generateWithOllama(enhancedPrompt);
+  // Try Ollama with vision model first
+  const imageData = await generateWithOllama(enhancedPrompt);
 
-    // Cache the result
-    await cacheStepImage(recipe_id, step_index, imageData);
+  // Cache the result
+  await cacheStepImage(recipe_id, step_index, imageData);
 
-    return {
-      recipe_id,
-      step_index,
-      image_url: imageData,
-      cached: false,
-      version: 1,
-    };
-  } catch (error) {
-    // Fallback: return a placeholder or description
-    console.warn('Visual generation failed, using placeholder:', error);
-    return {
-      recipe_id,
-      step_index,
-      image_url: createPlaceholderImage(visual_prompt),
-      cached: false,
-      version: 0,
-    };
-  }
+  return {
+    recipe_id,
+    step_index,
+    image_url: imageData,
+    cached: false,
+    version: 1,
+  };
 }
 
 /**
@@ -131,7 +119,8 @@ async function generateWithOllama(prompt: string): Promise<string> {
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama request failed: ${response.status}`);
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Ollama request failed (${response.status}): ${errorText || 'Unknown error'}`);
     }
 
     const data = await response.json();
@@ -141,45 +130,22 @@ async function generateWithOllama(prompt: string): Promise<string> {
       return `data:image/png;base64,${data.images[0]}`;
     }
 
-    // Otherwise fall back to placeholder
-    throw new Error('No image data in response');
+    // Otherwise throw with details
+    throw new Error(`No image data in response. Model "${config.model}" may not support image generation. Response: ${JSON.stringify(data).slice(0, 200)}`);
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.name === 'AbortError') {
+        throw new Error(`Request timed out after ${config.timeout_ms / 1000}s. Is Ollama running at ${config.endpoint}?`);
+      }
+      if (err.message.includes('fetch')) {
+        throw new Error(`Cannot connect to Ollama at ${config.endpoint}. Make sure Ollama is running (ollama serve).`);
+      }
+      throw err;
+    }
+    throw new Error(`Image generation failed: ${String(err)}`);
   } finally {
     clearTimeout(timeout);
   }
-}
-
-/**
- * Creates a styled placeholder SVG with the visual description
- */
-function createPlaceholderImage(description: string): string {
-  // Truncate long descriptions
-  const maxLength = 100;
-  const shortDesc = description.length > maxLength
-    ? description.substring(0, maxLength) + '...'
-    : description;
-
-  // Create an SVG placeholder
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="512" height="384" viewBox="0 0 512 384">
-      <defs>
-        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#f8f9fa"/>
-          <stop offset="100%" style="stop-color:#e9ecef"/>
-        </linearGradient>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#bg)"/>
-      <rect x="20" y="20" width="472" height="344" rx="12" fill="white" stroke="#dee2e6" stroke-width="2"/>
-      <text x="256" y="160" text-anchor="middle" font-family="system-ui, sans-serif" font-size="48" fill="#6c757d">👁️</text>
-      <text x="256" y="210" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#495057">Visual Reference</text>
-      <foreignObject x="40" y="230" width="432" height="120">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui, sans-serif; font-size: 12px; color: #6c757d; text-align: center; line-height: 1.5; padding: 8px;">
-          ${shortDesc}
-        </div>
-      </foreignObject>
-    </svg>
-  `;
-
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
 
 // ============================================
@@ -313,30 +279,19 @@ export async function regenerateStepVisual(
   // Enhance the prompt for better results
   const enhancedPrompt = enhanceVisualPrompt(visual_prompt, style);
 
-  try {
-    // Generate new image
-    const imageData = await generateWithOllama(enhancedPrompt);
+  // Generate new image - let errors propagate
+  const imageData = await generateWithOllama(enhancedPrompt);
 
-    // Cache with new version
-    await cacheStepImage(recipe_id, step_index, imageData, nextVersion);
+  // Cache with new version
+  await cacheStepImage(recipe_id, step_index, imageData, nextVersion);
 
-    return {
-      recipe_id,
-      step_index,
-      image_url: imageData,
-      cached: false,
-      version: nextVersion,
-    };
-  } catch (error) {
-    console.warn('Visual regeneration failed, using placeholder:', error);
-    return {
-      recipe_id,
-      step_index,
-      image_url: createPlaceholderImage(visual_prompt),
-      cached: false,
-      version: 0,
-    };
-  }
+  return {
+    recipe_id,
+    step_index,
+    image_url: imageData,
+    cached: false,
+    version: nextVersion,
+  };
 }
 
 /**
