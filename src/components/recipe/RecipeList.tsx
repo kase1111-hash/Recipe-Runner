@@ -6,10 +6,11 @@ import type { Cookbook, Recipe } from '../../types';
 interface RecipeListProps {
   cookbook: Cookbook;
   onSelectRecipe: (recipe: Recipe) => void;
+  onAddRecipe: () => void;
   onBack: () => void;
 }
 
-export function RecipeList({ cookbook, onSelectRecipe, onBack }: RecipeListProps) {
+export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: RecipeListProps) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,19 +43,24 @@ export function RecipeList({ cookbook, onSelectRecipe, onBack }: RecipeListProps
         <Button variant="ghost" onClick={onBack} style={{ marginBottom: '1rem' }}>
           ← Back to Library
         </Button>
-        <h1
-          style={{
-            fontSize: '2rem',
-            fontWeight: 700,
-            color: '#111827',
-            margin: 0,
-          }}
-        >
-          {cookbook.title}
-        </h1>
-        <p style={{ color: '#6b7280', margin: '0.25rem 0 0' }}>
-          {cookbook.description}
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1
+              style={{
+                fontSize: '2rem',
+                fontWeight: 700,
+                color: '#111827',
+                margin: 0,
+              }}
+            >
+              {cookbook.title}
+            </h1>
+            <p style={{ color: '#6b7280', margin: '0.25rem 0 0' }}>
+              {cookbook.description}
+            </p>
+          </div>
+          <Button onClick={onAddRecipe}>+ Import Recipe</Button>
+        </div>
       </header>
 
       {recipes.length === 0 ? (
@@ -64,9 +70,9 @@ export function RecipeList({ cookbook, onSelectRecipe, onBack }: RecipeListProps
             No Recipes Yet
           </h2>
           <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
-            Add your first recipe to this cookbook
+            Import your first recipe to this cookbook
           </p>
-          <Button>Add Recipe</Button>
+          <Button onClick={onAddRecipe}>Import Recipe</Button>
         </Card>
       ) : (
         <div
