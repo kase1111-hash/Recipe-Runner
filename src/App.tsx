@@ -6,13 +6,14 @@ import { StepExecutor } from './components/step/StepExecutor';
 import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
 import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
+import { MealPlanner, MealPlanGroceryList } from './components/mealplan';
 import { initializeDatabase, getRecipe } from './db';
 import { seedSampleData } from './data/sampleCookbook';
 import type { Cookbook, Recipe, Ingredient } from './types';
 import type { ParsedRecipe } from './services/recipeParser';
 import type { ScaledRecipe } from './services/recipeScaling';
 
-type AppView = 'library' | 'cookbook' | 'detail' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete';
+type AppView = 'library' | 'cookbook' | 'detail' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete' | 'mealplanner' | 'mealplangroceries';
 
 function App() {
   const [initialized, setInitialized] = useState(false);
@@ -25,6 +26,7 @@ function App() {
   const [chefInitialMessage, setChefInitialMessage] = useState<string | undefined>();
   const [refreshKey, setRefreshKey] = useState(0);
   const [showScaler, setShowScaler] = useState(false);
+  const [selectedMealPlanId, setSelectedMealPlanId] = useState<string | null>(null);
 
   // Initialize database and seed sample data
   useEffect(() => {
@@ -172,10 +174,30 @@ function App() {
     setView('groceries');
   }
 
+  function handleOpenMealPlanner() {
+    setView('mealplanner');
+  }
+
+  function handleViewMealPlanGroceries(planId: string) {
+    setSelectedMealPlanId(planId);
+    setView('mealplangroceries');
+  }
+
+  function handleBackFromMealPlanner() {
+    setView('library');
+  }
+
+  function handleBackFromMealPlanGroceries() {
+    setView('mealplanner');
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       {view === 'library' && (
-        <CookbookLibrary onSelectCookbook={handleSelectCookbook} />
+        <CookbookLibrary
+          onSelectCookbook={handleSelectCookbook}
+          onOpenMealPlanner={handleOpenMealPlanner}
+        />
       )}
 
       {view === 'cookbook' && selectedCookbook && (
@@ -247,6 +269,20 @@ function App() {
           checkedIngredients={checkedIngredients}
           onComplete={handleCompletionFinished}
           onCookAgain={handleCookAgain}
+        />
+      )}
+
+      {view === 'mealplanner' && (
+        <MealPlanner
+          onViewGroceryList={handleViewMealPlanGroceries}
+          onBack={handleBackFromMealPlanner}
+        />
+      )}
+
+      {view === 'mealplangroceries' && selectedMealPlanId && (
+        <MealPlanGroceryList
+          planId={selectedMealPlanId}
+          onBack={handleBackFromMealPlanGroceries}
         />
       )}
 
