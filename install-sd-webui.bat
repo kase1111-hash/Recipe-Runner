@@ -32,59 +32,67 @@ if %errorlevel% neq 0 (
 for /f "tokens=*" %%i in ('git --version') do set GIT_VERSION=%%i
 echo        Git found: %GIT_VERSION%
 
-:: Check if Python is installed
-where python >nul 2>&1
-if %errorlevel% neq 0 (
-    echo.
-    echo ERROR: Python is not installed.
-    echo.
-    echo Please install Python 3.10.6 (REQUIRED - newer versions won't work!)
-    echo.
-    echo Download: https://www.python.org/ftp/python/3.10.6/python-3.10.6-amd64.exe
-    echo.
-    echo IMPORTANT during installation:
-    echo   [x] Check "Add Python to PATH"
-    echo   [x] Check "Install for all users" (optional)
-    echo.
-    echo After installing Python 3.10.6, run this installer again.
-    echo.
-    pause
-    exit /b 1
-)
-for /f "tokens=*" %%i in ('python --version') do set PYTHON_VERSION=%%i
-echo        Python found: %PYTHON_VERSION%
+:: Find Python 3.10 specifically (user may have multiple versions)
+set "PYTHON_CMD="
 
-:: Check Python version - MUST be 3.10.x (PyTorch doesn't support 3.11+)
-python -c "import sys; exit(0 if sys.version_info[:2] == (3, 10) else 1)" >nul 2>&1
-if %errorlevel% neq 0 (
-    echo.
-    echo ================================================
-    echo    ERROR: Wrong Python Version!
-    echo ================================================
-    echo.
-    echo    You have: %PYTHON_VERSION%
-    echo    Required: Python 3.10.x
-    echo.
-    echo    SD WebUI requires Python 3.10 because PyTorch
-    echo    doesn't have packages for newer versions yet.
-    echo.
-    echo    Python 3.11, 3.12, 3.13, 3.14 will NOT work!
-    echo.
-    echo ================================================
-    echo.
-    echo To fix this:
-    echo   1. Uninstall your current Python (optional)
-    echo   2. Download Python 3.10.6:
-    echo      https://www.python.org/ftp/python/3.10.6/python-3.10.6-amd64.exe
-    echo   3. Install with "Add Python to PATH" checked
-    echo   4. Run this installer again
-    echo.
-    echo If you have multiple Python versions, you can set
-    echo the path manually in webui-user.bat after install.
-    echo.
-    pause
-    exit /b 1
+:: First try the py launcher with -3.10
+py -3.10 --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "PYTHON_CMD=py -3.10"
+    for /f "tokens=*" %%i in ('py -3.10 --version') do set PYTHON_VERSION=%%i
+    echo        Found via py launcher: !PYTHON_VERSION!
+    goto :python_found
 )
+
+:: Try common Python 3.10 installation paths
+if exist "C:\Python310\python.exe" (
+    set "PYTHON_CMD=C:\Python310\python.exe"
+    for /f "tokens=*" %%i in ('"C:\Python310\python.exe" --version') do set PYTHON_VERSION=%%i
+    echo        Found at C:\Python310: !PYTHON_VERSION!
+    goto :python_found
+)
+
+if exist "%LOCALAPPDATA%\Programs\Python\Python310\python.exe" (
+    set "PYTHON_CMD=%LOCALAPPDATA%\Programs\Python\Python310\python.exe"
+    for /f "tokens=*" %%i in ('"%LOCALAPPDATA%\Programs\Python\Python310\python.exe" --version') do set PYTHON_VERSION=%%i
+    echo        Found in AppData: !PYTHON_VERSION!
+    goto :python_found
+)
+
+:: Check default python command as last resort
+where python >nul 2>&1
+if %errorlevel% equ 0 (
+    python -c "import sys; exit(0 if sys.version_info[:2] == (3, 10) else 1)" >nul 2>&1
+    if %errorlevel% equ 0 (
+        set "PYTHON_CMD=python"
+        for /f "tokens=*" %%i in ('python --version') do set PYTHON_VERSION=%%i
+        echo        Found in PATH: !PYTHON_VERSION!
+        goto :python_found
+    )
+)
+
+:: Python 3.10 not found
+echo.
+echo ================================================
+echo    ERROR: Python 3.10 Not Found!
+echo ================================================
+echo.
+echo    SD WebUI requires Python 3.10 specifically.
+echo    PyTorch doesn't support Python 3.11+ yet.
+echo.
+echo    You may have Python installed, but not 3.10.
+echo.
+echo To fix this:
+echo   1. Download Python 3.10.6:
+echo      https://www.python.org/ftp/python/3.10.6/python-3.10.6-amd64.exe
+echo   2. Install with "Add Python to PATH" checked
+echo   3. Run this installer again
+echo.
+pause
+exit /b 1
+
+:python_found
+echo        Using: %PYTHON_CMD%
 echo.
 
 :: Check if already installed
@@ -133,10 +141,22 @@ echo.
 echo [4/5] Configuring for Recipe Runner...
 echo.
 
-:: Create/modify webui-user.bat to include --api flag
+:: Create/modify webui-user.bat to include --api flag and Python path
 echo @echo off> "%INSTALL_PATH%\webui-user.bat"
 echo.>> "%INSTALL_PATH%\webui-user.bat"
-echo set PYTHON=>> "%INSTALL_PATH%\webui-user.bat"
+
+:: Set the Python path if we found a specific one
+if "%PYTHON_CMD%"=="py -3.10" (
+    echo set PYTHON=py -3.10>> "%INSTALL_PATH%\webui-user.bat"
+    echo        Python configured: py -3.10
+) else if "%PYTHON_CMD%"=="python" (
+    echo set PYTHON=>> "%INSTALL_PATH%\webui-user.bat"
+    echo        Python configured: default
+) else (
+    echo set PYTHON=%PYTHON_CMD%>> "%INSTALL_PATH%\webui-user.bat"
+    echo        Python configured: %PYTHON_CMD%
+)
+
 echo set GIT=>> "%INSTALL_PATH%\webui-user.bat"
 echo set VENV_DIR=>> "%INSTALL_PATH%\webui-user.bat"
 echo set COMMANDLINE_ARGS=--api --xformers>> "%INSTALL_PATH%\webui-user.bat"
