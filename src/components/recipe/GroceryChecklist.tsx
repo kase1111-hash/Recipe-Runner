@@ -7,6 +7,7 @@ interface GroceryChecklistProps {
   onComplete: (checkedIngredients: string[]) => void;
   onBack: () => void;
   onOpenChef: (ingredient: Ingredient) => void;
+  onOpenScaler?: () => void;
 }
 
 export function GroceryChecklist({
@@ -14,6 +15,7 @@ export function GroceryChecklist({
   onComplete,
   onBack,
   onOpenChef,
+  onOpenScaler,
 }: GroceryChecklistProps) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
@@ -50,17 +52,31 @@ export function GroceryChecklist({
         <Button variant="ghost" onClick={onBack} style={{ marginBottom: '1rem' }}>
           ← Back
         </Button>
-        <h1
-          style={{
-            fontSize: '1.75rem',
-            fontWeight: 700,
-            color: '#111827',
-            margin: '0 0 0.5rem',
-          }}
-        >
-          Grocery Checklist
-        </h1>
-        <p style={{ color: '#6b7280', margin: 0 }}>{recipe.name}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1
+              style={{
+                fontSize: '1.75rem',
+                fontWeight: 700,
+                color: '#111827',
+                margin: '0 0 0.5rem',
+              }}
+            >
+              Grocery Checklist
+            </h1>
+            <p style={{ color: '#6b7280', margin: 0 }}>{recipe.name}</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+              Yield: <strong style={{ color: '#111827' }}>{recipe.yield}</strong>
+            </div>
+            {onOpenScaler && (
+              <Button variant="secondary" size="sm" onClick={onOpenScaler}>
+                ⚖️ Scale Recipe
+              </Button>
+            )}
+          </div>
+        </div>
       </header>
 
       <Card style={{ marginBottom: '1.5rem' }}>
