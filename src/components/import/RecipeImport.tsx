@@ -6,6 +6,12 @@ import {
   type ParsedRecipe,
   type ParseProgress,
 } from '../../services/recipeParser';
+import {
+  parseDocument,
+  isSupportedFileType,
+  getFileTypeDescription,
+  type DocumentParseProgress,
+} from '../../services/documentParsing';
 import type { Cookbook } from '../../types';
 
 interface RecipeImportProps {
@@ -22,6 +28,8 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<ParseProgress | null>(null);
+  const [documentProgress, setDocumentProgress] = useState<DocumentParseProgress | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleUrlImport() {
@@ -62,34 +70,53 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
     }
   }
 
-  async function handleFileImport(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (!isSupportedFileType(file)) {
+      setError(`Unsupported file type: ${file.type}. Please use PDF, image, or text files.`);
+      return;
+    }
+
+    setSelectedFile(file);
+    setError(null);
+  }
+
+  async function handleFileImport() {
+    if (!selectedFile) {
+      setError('Please select a file first');
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setDocumentProgress(null);
+    setProgress(null);
 
     try {
-      let content = '';
+      // Step 1: Extract text from document
+      const documentResult = await parseDocument(selectedFile, setDocumentProgress);
 
-      if (file.type === 'text/plain') {
-        content = await file.text();
-      } else if (file.type === 'application/pdf') {
-        // For PDF, we'd need a PDF parsing library
-        // For now, show a helpful message
-        setError('PDF import requires the PDF.js library. Please paste the recipe text instead.');
-        setLoading(false);
-        return;
-      } else if (file.type.startsWith('image/')) {
-        // For images, we'd need OCR
-        setError('Image import requires OCR. Please paste the recipe text instead.');
-        setLoading(false);
-        return;
-      } else {
-        content = await file.text();
+      if (!documentResult.text || documentResult.text.length < 50) {
+        throw new Error('Could not extract enough text from the document. Please try a clearer image or different file.');
       }
 
-      const parsed = await parseRecipeFromText(content, setProgress);
+      // Show confidence warning for OCR
+      if (documentResult.source === 'image' && documentResult.confidence && documentResult.confidence < 0.7) {
+        console.warn(`OCR confidence is low: ${Math.round(documentResult.confidence * 100)}%`);
+      }
+
+      // Step 2: Parse extracted text into recipe structure
+      setDocumentProgress(null); // Clear document progress, switch to recipe parsing
+      const parsed = await parseRecipeFromText(documentResult.text, setProgress);
+
+      // Add source information
+      parsed.source = {
+        type: documentResult.source === 'image' ? 'original' : 'original',
+        // Could add more metadata here
+      };
+
       onImportComplete(parsed);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import file');
@@ -250,17 +277,18 @@ Instructions:
             </label>
             <div
               style={{
-                border: '2px dashed #d1d5db',
+                border: `2px dashed ${selectedFile ? '#2563eb' : '#d1d5db'}`,
                 borderRadius: '0.5rem',
                 padding: '2rem',
                 textAlign: 'center',
                 marginBottom: '1rem',
+                background: selectedFile ? '#eff6ff' : 'white',
               }}
             >
               <input
                 type="file"
                 accept=".txt,.pdf,image/*"
-                onChange={handleFileImport}
+                onChange={handleFileSelect}
                 disabled={loading}
                 style={{ display: 'none' }}
                 id="file-upload"
@@ -272,24 +300,54 @@ Instructions:
                   display: 'block',
                 }}
               >
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
-                <div style={{ fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
-                  Click to upload or drag and drop
-                </div>
-                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                  TXT, PDF, or image files
-                </div>
+                {selectedFile ? (
+                  <>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                      {selectedFile.type === 'application/pdf' ? '📄' :
+                       selectedFile.type.startsWith('image/') ? '🖼️' : '📝'}
+                    </div>
+                    <div style={{ fontWeight: 500, color: '#2563eb', marginBottom: '0.25rem' }}>
+                      {selectedFile.name}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      {getFileTypeDescription(selectedFile)} • {(selectedFile.size / 1024).toFixed(1)} KB
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                      Click to select a different file
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
+                    <div style={{ fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                      Click to upload or drag and drop
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      PDF, images (with OCR), or text files
+                    </div>
+                  </>
+                )}
               </label>
             </div>
+            {selectedFile && (
+              <Button
+                onClick={handleFileImport}
+                disabled={loading}
+                style={{ width: '100%', marginBottom: '1rem' }}
+              >
+                {loading ? 'Processing...' : `Import from ${getFileTypeDescription(selectedFile)}`}
+              </Button>
+            )}
             <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              Upload a text file, PDF, or photo of a recipe page.
+              <strong>Supported formats:</strong> PDF documents, images (JPG, PNG - uses OCR), and text files.
+              For best OCR results, use clear, well-lit photos of recipe pages.
             </p>
           </div>
         )}
       </Card>
 
       {/* Progress */}
-      {loading && progress && (
+      {loading && (documentProgress || progress) && (
         <Card style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div
@@ -303,15 +361,31 @@ Instructions:
               }}
             />
             <div>
-              <div style={{ fontWeight: 500, color: '#111827' }}>{progress.message}</div>
+              <div style={{ fontWeight: 500, color: '#111827' }}>
+                {documentProgress?.message || progress?.message}
+              </div>
               <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                {progress.progress}% complete
+                {documentProgress ? (
+                  documentProgress.currentPage && documentProgress.totalPages ? (
+                    `Page ${documentProgress.currentPage} of ${documentProgress.totalPages} • ${documentProgress.progress}%`
+                  ) : (
+                    `${documentProgress.progress}% complete`
+                  )
+                ) : (
+                  `${progress?.progress || 0}% complete`
+                )}
               </div>
             </div>
           </div>
+          {/* Two-phase progress for file imports */}
+          {method === 'file' && (
+            <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#6b7280' }}>
+              {documentProgress ? 'Step 1 of 2: Extracting text' : 'Step 2 of 2: Parsing recipe'}
+            </div>
+          )}
           <div
             style={{
-              marginTop: '1rem',
+              marginTop: '0.5rem',
               height: '0.5rem',
               background: '#e5e7eb',
               borderRadius: '9999px',
@@ -320,7 +394,7 @@ Instructions:
           >
             <div
               style={{
-                width: `${progress.progress}%`,
+                width: `${documentProgress?.progress || progress?.progress || 0}%`,
                 height: '100%',
                 background: '#2563eb',
                 transition: 'width 0.3s',
