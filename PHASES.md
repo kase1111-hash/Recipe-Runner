@@ -9,14 +9,14 @@ This guide breaks down the Recipe Runner project into 10 manageable development 
 **Goal:** Build the foundational React application with basic step-by-step recipe execution.
 
 ### Deliverables
-- [ ] React project setup with functional components and hooks
-- [ ] Basic app shell with navigation structure
-- [ ] Single hardcoded recipe for testing
-- [ ] Step Executor component displaying one step at a time
-- [ ] Linear navigation (previous/next buttons)
-- [ ] Progress indicator showing current step position
-- [ ] Step display showing title, instruction, time, and type (active/passive)
-- [ ] Basic responsive layout (mobile-first)
+- [x] React project setup with functional components and hooks
+- [x] Basic app shell with navigation structure
+- [x] Single hardcoded recipe for testing
+- [x] Step Executor component displaying one step at a time
+- [x] Linear navigation (previous/next buttons)
+- [x] Progress indicator showing current step position
+- [x] Step display showing title, instruction, time, and type (active/passive)
+- [x] Basic responsive layout (mobile-first)
 
 ### Technical Requirements
 - React 18+ initialization
