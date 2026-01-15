@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { Button, Card } from '../common';
+import { DietarySettings } from './DietarySettings';
 import { useTheme, type ThemeMode } from '../../contexts';
 import { getPreferences, savePreferences } from '../../db';
 import type { UserPreferences } from '../../types';
@@ -11,7 +12,7 @@ interface GeneralSettingsProps {
   onClose: () => void;
 }
 
-type SettingsTab = 'general' | 'cooking' | 'visual' | 'ai' | 'shortcuts';
+type SettingsTab = 'general' | 'cooking' | 'visual' | 'ai' | 'dietary' | 'shortcuts';
 
 export function GeneralSettings({ onClose }: GeneralSettingsProps) {
   const { mode, setMode } = useTheme();
@@ -30,6 +31,7 @@ export function GeneralSettings({ onClose }: GeneralSettingsProps) {
   const tabs: { id: SettingsTab; label: string; icon: string }[] = [
     { id: 'general', label: 'General', icon: '⚙️' },
     { id: 'cooking', label: 'Cooking', icon: '🍳' },
+    { id: 'dietary', label: 'Dietary', icon: '🥗' },
     { id: 'visual', label: 'Visual', icon: '🎨' },
     { id: 'ai', label: 'AI Settings', icon: '🤖' },
     { id: 'shortcuts', label: 'Shortcuts', icon: '⌨️' },
@@ -225,6 +227,10 @@ export function GeneralSettings({ onClose }: GeneralSettingsProps) {
                 </div>
               </Card>
             </div>
+          )}
+
+          {activeTab === 'dietary' && (
+            <DietarySettings embedded />
           )}
 
           {activeTab === 'visual' && (

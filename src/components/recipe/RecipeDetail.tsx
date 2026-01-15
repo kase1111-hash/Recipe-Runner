@@ -3,8 +3,9 @@
 
 import { useState } from 'react';
 import { Button, Card, DifficultyBadge, NutritionDisplay, CostDisplay, ShareButton } from '../common';
+import { DietaryWarnings } from './DietaryWarnings';
 import { exportRecipe, downloadAsFile, copyToClipboard } from '../../services/export';
-import type { Recipe } from '../../types';
+import type { Recipe, AdaptedRecipe } from '../../types';
 
 interface RecipeDetailProps {
   recipe: Recipe;
@@ -18,6 +19,10 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [showExport, setShowExport] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
+  const [adaptedRecipe, setAdaptedRecipe] = useState<AdaptedRecipe | null>(null);
+
+  // Use adapted recipe if available, otherwise original
+  const displayRecipe = adaptedRecipe || recipe;
 
   const cookCount = recipe.cook_history.length;
   const avgRating = cookCount > 0
@@ -145,6 +150,12 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
           </div>
         </Card>
       )}
+
+      {/* Dietary Warnings & Adaptation */}
+      <DietaryWarnings
+        recipe={recipe}
+        onRecipeAdapted={setAdaptedRecipe}
+      />
 
       {/* Tabs */}
       <div
@@ -375,17 +386,18 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
       {activeTab === 'ingredients' && (
         <Card style={{ padding: '1rem' }}>
           <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>
-            🥬 Ingredients ({recipe.ingredients.length})
+            🥬 Ingredients ({displayRecipe.ingredients.length})
+            {adaptedRecipe && <span style={{ color: 'var(--success)', marginLeft: '0.5rem' }}>(Adapted)</span>}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {recipe.ingredients.map((ing, idx) => (
+            {displayRecipe.ingredients.map((ing, idx) => (
               <div
                 key={idx}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
                   padding: '0.5rem',
-                  borderBottom: idx < recipe.ingredients.length - 1 ? '1px solid var(--border-primary)' : 'none',
+                  borderBottom: idx < displayRecipe.ingredients.length - 1 ? '1px solid var(--border-primary)' : 'none',
                 }}
               >
                 <span style={{ fontWeight: 600, color: 'var(--text-secondary)', minWidth: '80px' }}>
