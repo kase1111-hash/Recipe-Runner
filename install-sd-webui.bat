@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ================================================
-echo    Stable Diffusion WebUI Installer
+echo    Stable Diffusion WebUI Forge Installer
 echo    For Recipe Runner Image Generation
 echo ================================================
 echo.
@@ -116,11 +116,12 @@ if exist "%INSTALL_PATH%\webui-user.bat" (
 echo        Install path: %INSTALL_PATH%
 echo.
 
-:: Clone the repository
-echo [3/5] Downloading Stable Diffusion WebUI...
+:: Clone the repository (using Forge - faster and more maintained than original A1111)
+echo [3/5] Downloading Stable Diffusion WebUI Forge...
+echo        (Forge is a faster, optimized fork of AUTOMATIC1111)
 echo        This may take a few minutes...
 echo.
-git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git "%INSTALL_PATH%"
+git clone https://github.com/lllyasviel/stable-diffusion-webui-forge.git "%INSTALL_PATH%"
 if %errorlevel% neq 0 (
     echo.
     echo ERROR: Failed to clone repository.
