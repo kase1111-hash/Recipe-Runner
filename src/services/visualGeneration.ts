@@ -528,7 +528,13 @@ export function getVisualSettings(): VisualSettings {
   try {
     const stored = localStorage.getItem(VISUAL_SETTINGS_KEY);
     if (stored) {
-      return { ...defaultVisualSettings, ...JSON.parse(stored) };
+      const parsed = { ...defaultVisualSettings, ...JSON.parse(stored) };
+      // Auto-migrate from 'local' (doesn't work) to 'sdwebui' (works)
+      if (parsed.apiProvider === 'local') {
+        parsed.apiProvider = 'sdwebui';
+        localStorage.setItem(VISUAL_SETTINGS_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
     }
   } catch {
     // Ignore parse errors
