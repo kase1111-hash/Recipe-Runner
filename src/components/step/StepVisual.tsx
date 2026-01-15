@@ -63,7 +63,8 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
       onVisualLoad?.(result);
     } catch (err) {
       console.error('Failed to generate visual:', err);
-      setError('Could not generate visual');
+      const errorMessage = err instanceof Error ? err.message : 'Could not generate visual';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -97,7 +98,8 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
       onVisualLoad?.(result);
     } catch (err) {
       console.error('Failed to regenerate visual:', err);
-      setError('Could not regenerate visual');
+      const errorMessage = err instanceof Error ? err.message : 'Could not regenerate visual';
+      setError(errorMessage);
     } finally {
       setRegenerating(false);
     }
