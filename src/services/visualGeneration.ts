@@ -112,6 +112,8 @@ async function generateImage(prompt: string, settings: VisualSettings): Promise<
       return await generateWithOpenAI(prompt, { type: 'openai', apiKey: settings.apiKey });
     case 'stability':
       return await generateWithStabilityAI(prompt, { type: 'stability', apiKey: settings.apiKey });
+    case 'sdwebui':
+      return await generateWithSDWebUI(prompt, settings.sdwebuiEndpoint || 'http://localhost:7860');
     case 'local':
     default:
       return await generateWithOllama(prompt);
@@ -329,6 +331,72 @@ async function generateWithStabilityAI(prompt: string, apiConfig: ExternalImageA
   }
 }
 
+/**
+ * Generate image using Stable Diffusion WebUI (AUTOMATIC1111) API
+ * Runs locally on port 7860 by default
+ */
+async function generateWithSDWebUI(prompt: string, endpoint: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000); // 2 minute timeout for local generation
+
+  try {
+    // Add negative prompt to avoid common issues
+    const negativePrompt = 'blurry, low quality, distorted, deformed, ugly, bad anatomy, watermark, text, signature';
+
+    const response = await fetch(`${endpoint}/sdapi/v1/txt2img`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+        negative_prompt: negativePrompt,
+        steps: 25,
+        width: 512,
+        height: 512,
+        cfg_scale: 7,
+        sampler_name: 'DPM++ 2M Karras',
+        batch_size: 1,
+        n_iter: 1,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+
+      if (response.status === 404) {
+        throw new Error(`SD WebUI API not found at ${endpoint}. Make sure the API is enabled (--api flag).`);
+      }
+      if (response.status === 503) {
+        throw new Error('SD WebUI is busy generating another image. Please wait and try again.');
+      }
+      throw new Error(`SD WebUI error (${response.status}): ${errorText || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.images || !data.images[0]) {
+      throw new Error('No image data returned from SD WebUI');
+    }
+
+    return `data:image/png;base64,${data.images[0]}`;
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.name === 'AbortError') {
+        throw new Error(`Generation timed out after 2 minutes. The model may be loading or your GPU may be slow.`);
+      }
+      if (err.message.includes('fetch') || err.message.includes('Failed to fetch')) {
+        throw new Error(`Cannot connect to SD WebUI at ${endpoint}. Make sure it's running with --api flag.`);
+      }
+      throw err;
+    }
+    throw new Error(`SD WebUI generation failed: ${String(err)}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ============================================
 // Phase 8: Regeneration with Versioning
 // ============================================
@@ -475,8 +543,9 @@ export interface VisualSettings {
   autoGenerate: boolean;
   prefetchEnabled: boolean;
   prefetchCount: number;
-  apiProvider: 'local' | 'openai' | 'stability';
+  apiProvider: 'local' | 'sdwebui' | 'openai' | 'stability';
   apiKey?: string;
+  sdwebuiEndpoint?: string;
 }
 
 const VISUAL_SETTINGS_KEY = 'recipe_runner_visual_settings';
@@ -488,6 +557,7 @@ const defaultVisualSettings: VisualSettings = {
   prefetchEnabled: true,
   prefetchCount: 2,
   apiProvider: 'local',
+  sdwebuiEndpoint: 'http://localhost:7860',
 };
 
 export function getVisualSettings(): VisualSettings {

@@ -244,7 +244,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                 </label>
                 <select
                   value={settings.apiProvider}
-                  onChange={(e) => handleChange('apiProvider', e.target.value as 'local' | 'openai' | 'stability')}
+                  onChange={(e) => handleChange('apiProvider', e.target.value as 'local' | 'sdwebui' | 'openai' | 'stability')}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -255,7 +255,8 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                     color: 'var(--text-primary)',
                   }}
                 >
-                  <option value="local">Local (Ollama/Stable Diffusion)</option>
+                  <option value="local">Local (Ollama) - Not recommended</option>
+                  <option value="sdwebui">Stable Diffusion WebUI (Local, Free)</option>
                   <option value="openai">OpenAI DALL-E 3</option>
                   <option value="stability">Stability AI (SDXL)</option>
                 </select>
@@ -263,7 +264,10 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                 {/* Provider info */}
                 <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                   {settings.apiProvider === 'local' && (
-                    <>Requires Ollama running locally with an image generation model.</>
+                    <>Ollama doesn't support image generation. Use SD WebUI instead.</>
+                  )}
+                  {settings.apiProvider === 'sdwebui' && (
+                    <>Free local generation. Requires AUTOMATIC1111 WebUI running with --api flag.</>
                   )}
                   {settings.apiProvider === 'openai' && (
                     <>Uses DALL-E 3. Costs ~$0.04-0.08 per image. Get API key at platform.openai.com</>
@@ -273,7 +277,35 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                   )}
                 </div>
 
-                {settings.apiProvider !== 'local' && (
+                {/* SD WebUI Endpoint */}
+                {settings.apiProvider === 'sdwebui' && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>
+                      WebUI URL
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.sdwebuiEndpoint || 'http://localhost:7860'}
+                      onChange={(e) => handleChange('sdwebuiEndpoint', e.target.value)}
+                      placeholder="http://localhost:7860"
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid var(--border-secondary)',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
+                      }}
+                    />
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Start WebUI with: <code style={{ background: 'var(--bg-tertiary)', padding: '0.125rem 0.25rem', borderRadius: '0.25rem' }}>python launch.py --api</code>
+                    </div>
+                  </div>
+                )}
+
+                {/* API Key for cloud providers */}
+                {(settings.apiProvider === 'openai' || settings.apiProvider === 'stability') && (
                   <div style={{ marginTop: '0.75rem' }}>
                     <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>
                       API Key
