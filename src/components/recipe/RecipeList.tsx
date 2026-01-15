@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Card, Button, DifficultyBadge } from '../common';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, Button, DifficultyBadge, FavoriteButton } from '../common';
 import { getRecipesByCookbook } from '../../db';
 import type { Cookbook, Recipe } from '../../types';
 
@@ -10,9 +10,15 @@ interface RecipeListProps {
   onBack: () => void;
 }
 
+type FilterOption = 'all' | 'favorites' | 'recent';
+type SortOption = 'name' | 'difficulty' | 'time' | 'recent';
+
 export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: RecipeListProps) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState<FilterOption>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('name');
 
   useEffect(() => {
     loadRecipes();
@@ -29,9 +35,71 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
     }
   }
 
+  // Filter and sort recipes
+  const filteredRecipes = useMemo(() => {
+    let result = [...recipes];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (recipe) =>
+          recipe.name.toLowerCase().includes(query) ||
+          recipe.description.toLowerCase().includes(query) ||
+          recipe.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+          recipe.ingredients.some((ing) => ing.item.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply filter
+    if (filter === 'favorites') {
+      result = result.filter((recipe) => recipe.favorite);
+    } else if (filter === 'recent') {
+      // Show recipes cooked in the last 30 days
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      result = result.filter((recipe) =>
+        recipe.cook_history.some((h) => new Date(h.date).getTime() > thirtyDaysAgo)
+      );
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      // Always show favorites first within the sort
+      if (a.favorite && !b.favorite) return -1;
+      if (!a.favorite && b.favorite) return 1;
+
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'difficulty':
+          return a.difficulty.overall - b.difficulty.overall;
+        case 'time': {
+          const parseTime = (t: string) => {
+            const hours = t.match(/(\d+)\s*h/)?.[1] || '0';
+            const mins = t.match(/(\d+)\s*m/)?.[1] || '0';
+            return parseInt(hours) * 60 + parseInt(mins);
+          };
+          return parseTime(a.total_time) - parseTime(b.total_time);
+        }
+        case 'recent':
+          return new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [recipes, searchQuery, filter, sortBy]);
+
+  function handleFavoriteToggle(recipeId: string, newState: boolean) {
+    setRecipes((prev) =>
+      prev.map((r) => (r.id === recipeId ? { ...r, favorite: newState } : r))
+    );
+  }
+
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
         Loading recipes...
       </div>
     );
@@ -49,13 +117,13 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
               style={{
                 fontSize: '2rem',
                 fontWeight: 700,
-                color: '#111827',
+                color: 'var(--text-primary)',
                 margin: 0,
               }}
             >
               {cookbook.title}
             </h1>
-            <p style={{ color: '#6b7280', margin: '0.25rem 0 0' }}>
+            <p style={{ color: 'var(--text-tertiary)', margin: '0.25rem 0 0' }}>
               {cookbook.description}
             </p>
           </div>
@@ -63,16 +131,105 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
         </div>
       </header>
 
+      {/* Search and Filters */}
+      {recipes.length > 0 && (
+        <Card style={{ marginBottom: '1.5rem', padding: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Search Input */}
+            <div style={{ flex: '1 1 300px' }}>
+              <input
+                type="text"
+                placeholder="Search recipes, ingredients, tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  border: '1px solid var(--input-border)',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  background: 'var(--input-bg)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+            </div>
+
+            {/* Filter Buttons */}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {(['all', 'favorites', 'recent'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  style={{
+                    padding: '0.5rem 0.75rem',
+                    border: filter === f ? '1px solid var(--accent-primary)' : '1px solid var(--border-secondary)',
+                    borderRadius: '0.5rem',
+                    background: filter === f ? 'var(--accent-light)' : 'var(--bg-secondary)',
+                    color: filter === f ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    fontWeight: filter === f ? 500 : 400,
+                  }}
+                >
+                  {f === 'all' && 'All'}
+                  {f === 'favorites' && '❤️ Favorites'}
+                  {f === 'recent' && '🕒 Recent'}
+                </button>
+              ))}
+            </div>
+
+            {/* Sort Dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              style={{
+                padding: '0.5rem 0.75rem',
+                border: '1px solid var(--input-border)',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                background: 'var(--input-bg)',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="name">Sort: Name</option>
+              <option value="difficulty">Sort: Difficulty</option>
+              <option value="time">Sort: Time</option>
+              <option value="recent">Sort: Recently Modified</option>
+            </select>
+          </div>
+
+          {/* Results count */}
+          <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            {filteredRecipes.length} of {recipes.length} recipes
+            {searchQuery && ` matching "${searchQuery}"`}
+          </div>
+        </Card>
+      )}
+
       {recipes.length === 0 ? (
         <Card style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📝</div>
-          <h2 style={{ fontSize: '1.5rem', color: '#111827', margin: '0 0 0.5rem' }}>
+          <h2 style={{ fontSize: '1.5rem', color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>
             No Recipes Yet
           </h2>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--text-tertiary)', marginBottom: '1.5rem' }}>
             Import your first recipe to this cookbook
           </p>
           <Button onClick={onAddRecipe}>Import Recipe</Button>
+        </Card>
+      ) : filteredRecipes.length === 0 ? (
+        <Card style={{ textAlign: 'center', padding: '3rem 2rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+          <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>
+            No Results Found
+          </h2>
+          <p style={{ color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
+            Try adjusting your search or filters
+          </p>
+          <Button variant="secondary" onClick={() => { setSearchQuery(''); setFilter('all'); }}>
+            Clear Filters
+          </Button>
         </Card>
       ) : (
         <div
@@ -81,7 +238,7 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
             gap: '1rem',
           }}
         >
-          {recipes.map((recipe) => (
+          {filteredRecipes.map((recipe) => (
             <Card
               key={recipe.id}
               hoverable
@@ -95,20 +252,25 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <h3
-                    style={{
-                      fontSize: '1.25rem',
-                      fontWeight: 600,
-                      color: '#111827',
-                      margin: '0 0 0.5rem',
-                    }}
-                  >
-                    {recipe.name}
-                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <h3
+                      style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        margin: 0,
+                      }}
+                    >
+                      {recipe.name}
+                    </h3>
+                    {recipe.favorite && (
+                      <span style={{ color: 'var(--error)', fontSize: '0.875rem' }}>❤️</span>
+                    )}
+                  </div>
                   <p
                     style={{
                       fontSize: '0.875rem',
-                      color: '#6b7280',
+                      color: 'var(--text-tertiary)',
                       margin: '0 0 0.75rem',
                     }}
                   >
@@ -119,16 +281,25 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
                       display: 'flex',
                       gap: '1rem',
                       fontSize: '0.875rem',
-                      color: '#6b7280',
+                      color: 'var(--text-tertiary)',
                     }}
                   >
                     <span>⏱ {recipe.total_time}</span>
                     <span>📊 {recipe.steps.length} steps</span>
                     <span>🍽 {recipe.yield}</span>
                     {recipe.safe_temp && <span>🌡️ {recipe.safe_temp.value}{recipe.safe_temp.unit}</span>}
+                    {recipe.cook_history.length > 0 && (
+                      <span>🍳 Cooked {recipe.cook_history.length}x</span>
+                    )}
                   </div>
                 </div>
-                <div style={{ marginLeft: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginLeft: '1rem' }}>
+                  <FavoriteButton
+                    recipeId={recipe.id}
+                    initialFavorite={recipe.favorite || false}
+                    size="sm"
+                    onToggle={(newState) => handleFavoriteToggle(recipe.id, newState)}
+                  />
                   <DifficultyBadge score={recipe.difficulty} />
                 </div>
               </div>
@@ -147,9 +318,9 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
                       style={{
                         fontSize: '0.75rem',
                         padding: '0.125rem 0.5rem',
-                        background: '#f3f4f6',
+                        background: 'var(--bg-tertiary)',
                         borderRadius: '9999px',
-                        color: '#6b7280',
+                        color: 'var(--text-tertiary)',
                       }}
                     >
                       {tag}

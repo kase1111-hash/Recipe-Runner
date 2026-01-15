@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ThemeProvider, KeyboardShortcutsProvider } from './contexts';
 import { CookbookLibrary } from './components/cookbook/CookbookLibrary';
 import { RecipeList, RecipeScaler, MiseEnPlace, CookCompletion, RecipeDetail } from './components/recipe';
 import { GroceryChecklist } from './components/recipe/GroceryChecklist';
@@ -41,20 +42,22 @@ function App() {
 
   if (!initialized) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#f9fafb',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🍳</div>
-          <div style={{ color: '#6b7280' }}>Loading Recipe Runner...</div>
+      <ThemeProvider>
+        <div
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--bg-secondary)',
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🍳</div>
+            <div style={{ color: 'var(--text-tertiary)' }}>Loading Recipe Runner...</div>
+          </div>
         </div>
-      </div>
+      </ThemeProvider>
     );
   }
 
@@ -201,8 +204,10 @@ function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
-      {view === 'library' && (
+    <ThemeProvider>
+      <KeyboardShortcutsProvider>
+        <div style={{ minHeight: '100vh', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+        {view === 'library' && (
         <CookbookLibrary
           onSelectCookbook={handleSelectCookbook}
           onOpenMealPlanner={handleOpenMealPlanner}
@@ -311,17 +316,19 @@ function App() {
         />
       )}
 
-      {/* Chef Ollama Overlay */}
-      {showChefOllama && selectedRecipe && (
-        <ChefOllamaChat
-          recipe={selectedRecipe}
-          currentStepIndex={0}
-          checkedIngredients={checkedIngredients}
-          initialMessage={chefInitialMessage}
-          onClose={handleCloseChef}
-        />
-      )}
-    </div>
+        {/* Chef Ollama Overlay */}
+        {showChefOllama && selectedRecipe && (
+          <ChefOllamaChat
+            recipe={selectedRecipe}
+            currentStepIndex={0}
+            checkedIngredients={checkedIngredients}
+            initialMessage={chefInitialMessage}
+            onClose={handleCloseChef}
+          />
+        )}
+      </div>
+      </KeyboardShortcutsProvider>
+    </ThemeProvider>
   );
 }
 

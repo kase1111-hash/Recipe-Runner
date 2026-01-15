@@ -8,28 +8,24 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants = {
   primary: {
-    background: '#2563eb',
-    color: '#ffffff',
+    background: 'var(--btn-primary-bg)',
+    color: 'var(--btn-primary-text)',
     border: 'none',
-    hoverBackground: '#1d4ed8',
   },
   secondary: {
-    background: '#f3f4f6',
-    color: '#374151',
-    border: '1px solid #d1d5db',
-    hoverBackground: '#e5e7eb',
+    background: 'var(--btn-secondary-bg)',
+    color: 'var(--btn-secondary-text)',
+    border: '1px solid var(--border-secondary)',
   },
   danger: {
-    background: '#dc2626',
+    background: 'var(--error)',
     color: '#ffffff',
     border: 'none',
-    hoverBackground: '#b91c1c',
   },
   ghost: {
     background: 'transparent',
-    color: '#374151',
+    color: 'var(--text-secondary)',
     border: 'none',
-    hoverBackground: '#f3f4f6',
   },
 };
 
@@ -56,8 +52,8 @@ export function Button({
       disabled={disabled}
       style={{
         ...sizeStyles,
-        background: disabled ? '#d1d5db' : variantStyles.background,
-        color: disabled ? '#9ca3af' : variantStyles.color,
+        background: disabled ? 'var(--border-secondary)' : variantStyles.background,
+        color: disabled ? 'var(--text-muted)' : variantStyles.color,
         border: variantStyles.border,
         borderRadius: '0.5rem',
         fontWeight: 500,

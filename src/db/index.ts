@@ -108,6 +108,37 @@ export async function addCookHistoryEntry(
 }
 
 // ============================================
+// Favorites Operations
+// ============================================
+
+export async function toggleFavorite(recipeId: string): Promise<boolean> {
+  const recipe = await db.recipes.get(recipeId);
+  if (recipe) {
+    const newFavoriteState = !recipe.favorite;
+    await db.recipes.update(recipeId, {
+      favorite: newFavoriteState,
+      modified_at: new Date().toISOString(),
+    });
+    return newFavoriteState;
+  }
+  return false;
+}
+
+export async function getFavoriteRecipes(): Promise<Recipe[]> {
+  return await db.recipes.filter((recipe) => recipe.favorite === true).toArray();
+}
+
+export async function getAllRecipesWithFavorites(): Promise<Recipe[]> {
+  const recipes = await db.recipes.toArray();
+  // Sort favorites first, then by modified date
+  return recipes.sort((a, b) => {
+    if (a.favorite && !b.favorite) return -1;
+    if (!a.favorite && b.favorite) return 1;
+    return new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime();
+  });
+}
+
+// ============================================
 // Cooking Session Operations
 // ============================================
 

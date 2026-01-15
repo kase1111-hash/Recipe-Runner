@@ -119,6 +119,7 @@ export interface Recipe {
   created_at: string;
   modified_at: string;
   cook_history: CookHistory[];
+  favorite?: boolean;  // Phase 10 - Favorites/bookmarking
 }
 
 export interface Cookbook {
