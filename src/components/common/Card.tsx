@@ -12,10 +12,11 @@ export function Card({ children, style, onClick, hoverable = false }: CardProps)
     <div
       onClick={onClick}
       style={{
-        background: 'white',
+        background: 'var(--card-bg)',
         borderRadius: '1rem',
         padding: '1.5rem',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        boxShadow: 'var(--card-shadow)',
+        border: '1px solid var(--card-border)',
         cursor: onClick ? 'pointer' : 'default',
         transition: hoverable ? 'transform 0.2s, box-shadow 0.2s' : undefined,
         ...style,
@@ -23,13 +24,13 @@ export function Card({ children, style, onClick, hoverable = false }: CardProps)
       onMouseEnter={(e) => {
         if (hoverable) {
           e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
         }
       }}
       onMouseLeave={(e) => {
         if (hoverable) {
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+          e.currentTarget.style.boxShadow = 'var(--card-shadow)';
         }
       }}
     >

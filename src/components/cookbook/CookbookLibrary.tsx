@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, Button } from '../common';
-import { VisualSettings } from '../settings/VisualSettings';
+import { GeneralSettings } from '../settings/GeneralSettings';
+import { ThemeToggle } from '../../contexts';
 import { getAllCookbooks } from '../../db';
 import type { Cookbook } from '../../types';
 
@@ -41,7 +42,7 @@ export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInv
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
         Loading cookbooks...
       </div>
     );
@@ -62,17 +63,18 @@ export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInv
             style={{
               fontSize: '2rem',
               fontWeight: 700,
-              color: '#111827',
+              color: 'var(--text-primary)',
               margin: 0,
             }}
           >
             Recipe Runner
           </h1>
-          <p style={{ color: '#6b7280', margin: '0.25rem 0 0' }}>
+          <p style={{ color: 'var(--text-tertiary)', margin: '0.25rem 0 0' }}>
             Your personal cookbook library
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <ThemeToggle size="sm" />
           <Button variant="ghost" onClick={() => setShowVisualSettings(true)} title="Visual Settings">
             ⚙️
           </Button>
@@ -213,9 +215,9 @@ export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInv
         </div>
       )}
 
-      {/* Visual Settings Modal */}
+      {/* General Settings Modal */}
       {showVisualSettings && (
-        <VisualSettings onClose={() => setShowVisualSettings(false)} />
+        <GeneralSettings onClose={() => setShowVisualSettings(false)} />
       )}
     </div>
   );
