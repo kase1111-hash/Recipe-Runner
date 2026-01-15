@@ -33,6 +33,7 @@ const lightTheme = {
   '--card-bg': '#ffffff',
   '--card-border': '#e5e7eb',
   '--card-shadow': '0 1px 3px rgba(0, 0, 0, 0.1)',
+  '--card-shadow-lg': '0 4px 12px rgba(0, 0, 0, 0.15)',
 
   // Text colors
   '--text-primary': '#111827',
@@ -48,12 +49,15 @@ const lightTheme = {
 
   // Status colors
   '--success': '#16a34a',
+  '--success-text': '#166534',
   '--success-bg': '#dcfce7',
   '--success-border': '#86efac',
   '--warning': '#ca8a04',
+  '--warning-text': '#92400e',
   '--warning-bg': '#fef3c7',
   '--warning-border': '#fcd34d',
   '--error': '#dc2626',
+  '--error-text': '#991b1b',
   '--error-bg': '#fef2f2',
   '--error-border': '#fecaca',
   '--info': '#2563eb',
@@ -75,6 +79,14 @@ const lightTheme = {
   '--btn-secondary-bg': '#f3f4f6',
   '--btn-secondary-text': '#374151',
   '--btn-ghost-hover': 'rgba(0, 0, 0, 0.05)',
+
+  // Overlay
+  '--overlay-bg': 'rgba(0, 0, 0, 0.5)',
+  '--overlay-light': 'rgba(255, 255, 255, 0.8)',
+
+  // Progress/Charts
+  '--progress-track': '#e5e7eb',
+  '--progress-bar': '#2563eb',
 };
 
 const darkTheme = {
@@ -89,6 +101,7 @@ const darkTheme = {
   '--card-bg': '#1f2937',
   '--card-border': '#374151',
   '--card-shadow': '0 1px 3px rgba(0, 0, 0, 0.3)',
+  '--card-shadow-lg': '0 4px 12px rgba(0, 0, 0, 0.4)',
 
   // Text colors
   '--text-primary': '#f9fafb',
@@ -104,12 +117,15 @@ const darkTheme = {
 
   // Status colors
   '--success': '#22c55e',
+  '--success-text': '#4ade80',
   '--success-bg': '#14532d',
   '--success-border': '#166534',
   '--warning': '#eab308',
+  '--warning-text': '#fbbf24',
   '--warning-bg': '#422006',
   '--warning-border': '#713f12',
   '--error': '#ef4444',
+  '--error-text': '#f87171',
   '--error-bg': '#450a0a',
   '--error-border': '#7f1d1d',
   '--info': '#3b82f6',
@@ -131,6 +147,14 @@ const darkTheme = {
   '--btn-secondary-bg': '#374151',
   '--btn-secondary-text': '#e5e7eb',
   '--btn-ghost-hover': 'rgba(255, 255, 255, 0.1)',
+
+  // Overlay
+  '--overlay-bg': 'rgba(0, 0, 0, 0.7)',
+  '--overlay-light': 'rgba(31, 41, 55, 0.9)',
+
+  // Progress/Charts
+  '--progress-track': '#374151',
+  '--progress-bar': '#3b82f6',
 };
 
 // ============================================

@@ -9,7 +9,7 @@ export function ProgressBar({
   value,
   max,
   showLabel = true,
-  color = '#2563eb',
+  color,
 }: ProgressBarProps) {
   const percentage = max > 0 ? Math.round((value / max) * 100) : 0;
 
@@ -22,7 +22,7 @@ export function ProgressBar({
             justifyContent: 'space-between',
             marginBottom: '0.25rem',
             fontSize: '0.875rem',
-            color: '#6b7280',
+            color: 'var(--text-tertiary)',
           }}
         >
           <span>
@@ -35,7 +35,7 @@ export function ProgressBar({
         style={{
           width: '100%',
           height: '0.5rem',
-          background: '#e5e7eb',
+          background: 'var(--progress-track)',
           borderRadius: '9999px',
           overflow: 'hidden',
         }}
@@ -44,7 +44,7 @@ export function ProgressBar({
           style={{
             width: `${percentage}%`,
             height: '100%',
-            background: color,
+            background: color || 'var(--progress-bar)',
             borderRadius: '9999px',
             transition: 'width 0.3s ease',
           }}

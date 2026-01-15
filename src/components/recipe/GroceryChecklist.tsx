@@ -58,17 +58,17 @@ export function GroceryChecklist({
               style={{
                 fontSize: '1.75rem',
                 fontWeight: 700,
-                color: '#111827',
+                color: 'var(--text-primary)',
                 margin: '0 0 0.5rem',
               }}
             >
               Grocery Checklist
             </h1>
-            <p style={{ color: '#6b7280', margin: 0 }}>{recipe.name}</p>
+            <p style={{ color: 'var(--text-tertiary)', margin: 0 }}>{recipe.name}</p>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-              Yield: <strong style={{ color: '#111827' }}>{recipe.yield}</strong>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>
+              Yield: <strong style={{ color: 'var(--text-primary)' }}>{recipe.yield}</strong>
             </div>
             {onOpenScaler && (
               <Button variant="secondary" size="sm" onClick={onOpenScaler}>
@@ -83,14 +83,14 @@ export function GroceryChecklist({
         <ProgressBar
           value={checked.size}
           max={recipe.ingredients.length}
-          color={allChecked ? '#22c55e' : '#2563eb'}
+          color={allChecked ? 'var(--success)' : 'var(--accent-primary)'}
         />
         {!allChecked && (
           <p
             style={{
               marginTop: '0.75rem',
               fontSize: '0.875rem',
-              color: '#6b7280',
+              color: 'var(--text-tertiary)',
               textAlign: 'center',
             }}
           >
@@ -121,8 +121,8 @@ export function GroceryChecklist({
                   width: '1.5rem',
                   height: '1.5rem',
                   borderRadius: '0.375rem',
-                  border: `2px solid ${checked.has(ingredient.item) ? '#22c55e' : '#d1d5db'}`,
-                  background: checked.has(ingredient.item) ? '#22c55e' : 'white',
+                  border: `2px solid ${checked.has(ingredient.item) ? 'var(--success)' : 'var(--border-secondary)'}`,
+                  background: checked.has(ingredient.item) ? 'var(--success)' : 'var(--card-bg)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -151,7 +151,7 @@ export function GroceryChecklist({
                   style={{
                     fontSize: '1rem',
                     fontWeight: 500,
-                    color: checked.has(ingredient.item) ? '#9ca3af' : '#111827',
+                    color: checked.has(ingredient.item) ? 'var(--text-muted)' : 'var(--text-primary)',
                     textDecoration: checked.has(ingredient.item) ? 'line-through' : 'none',
                   }}
                 >
@@ -160,7 +160,7 @@ export function GroceryChecklist({
                   </span>{' '}
                   {ingredient.item}
                   {ingredient.prep && (
-                    <span style={{ color: '#6b7280', fontWeight: 400 }}>
+                    <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>
                       , {ingredient.prep}
                     </span>
                   )}
@@ -169,7 +169,7 @@ export function GroceryChecklist({
                   <span
                     style={{
                       fontSize: '0.75rem',
-                      color: '#9ca3af',
+                      color: 'var(--text-muted)',
                       fontStyle: 'italic',
                     }}
                   >
@@ -182,7 +182,7 @@ export function GroceryChecklist({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleMissingIngredient(ingredient)}
-                style={{ color: '#6b7280' }}
+                style={{ color: 'var(--text-tertiary)' }}
               >
                 Don't have this
               </Button>
@@ -194,7 +194,7 @@ export function GroceryChecklist({
                   marginTop: '0.5rem',
                   marginLeft: '2.5rem',
                   fontSize: '0.75rem',
-                  color: '#6b7280',
+                  color: 'var(--text-tertiary)',
                 }}
               >
                 💡 Can substitute: {ingredient.substitutes.join(' or ')}
@@ -210,7 +210,7 @@ export function GroceryChecklist({
             style={{
               fontSize: '1.25rem',
               fontWeight: 600,
-              color: '#111827',
+              color: 'var(--text-primary)',
               margin: '2rem 0 1rem',
             }}
           >
@@ -221,7 +221,7 @@ export function GroceryChecklist({
               style={{
                 margin: 0,
                 padding: '0 0 0 1.25rem',
-                color: '#374151',
+                color: 'var(--text-secondary)',
               }}
             >
               {recipe.equipment.map((item) => (

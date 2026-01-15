@@ -1,20 +1,105 @@
 @echo off
+setlocal enabledelayedexpansion
+
 echo ======================================
 echo    Recipe Runner - Development Server
 echo ======================================
 echo.
 
-:: Check if node_modules exists
-if not exist "node_modules" (
-    echo Installing dependencies...
-    call npm install
+:: Check if Node.js is installed
+echo [1/3] Checking Node.js installation...
+where node >nul 2>&1
+if %errorlevel% neq 0 (
     echo.
+    echo ERROR: Node.js is not installed or not in PATH.
+    echo.
+    echo Please install Node.js from https://nodejs.org/
+    echo After installation, restart your command prompt and try again.
+    echo.
+    pause
+    exit /b 1
 )
+for /f "tokens=*" %%i in ('node -v') do set NODE_VERSION=%%i
+echo        Node.js %NODE_VERSION% found.
+echo.
+
+:: Check if npm is available
+echo [2/3] Checking npm installation...
+where npm >nul 2>&1
+if %errorlevel% neq 0 (
+    echo.
+    echo ERROR: npm is not installed or not in PATH.
+    echo.
+    echo npm usually comes with Node.js. Try reinstalling Node.js from https://nodejs.org/
+    echo.
+    pause
+    exit /b 1
+)
+for /f "tokens=*" %%i in ('npm -v') do set NPM_VERSION=%%i
+echo        npm v%NPM_VERSION% found.
+echo.
+
+:: Check and install dependencies
+echo [3/3] Checking dependencies...
+if not exist "node_modules" (
+    echo        node_modules not found. Installing dependencies...
+    echo.
+    call npm install
+    if %errorlevel% neq 0 (
+        echo.
+        echo ERROR: Failed to install dependencies.
+        echo.
+        echo Possible causes:
+        echo   - No internet connection
+        echo   - npm registry is unreachable
+        echo   - Package.json has invalid dependencies
+        echo.
+        echo Try running 'npm install' manually to see detailed errors.
+        echo.
+        pause
+        exit /b 1
+    )
+    echo.
+    echo        Dependencies installed successfully.
+) else (
+    echo        Dependencies already installed.
+)
+echo.
 
 :: Start the development server
-echo Starting development server...
+echo ======================================
+echo    Starting Development Server...
+echo ======================================
 echo.
-echo The app will open at http://localhost:5173
-echo Press Ctrl+C to stop the server
+echo    URL: http://localhost:5173
+echo    Press Ctrl+C to stop the server
 echo.
+echo ======================================
+echo.
+
 call npm run dev
+
+:: Handle server exit
+if %errorlevel% neq 0 (
+    echo.
+    echo ======================================
+    echo    SERVER STOPPED WITH ERROR
+    echo ======================================
+    echo.
+    echo Error code: %errorlevel%
+    echo.
+    echo Possible causes:
+    echo   - Port 5173 is already in use
+    echo   - Missing or corrupted dependencies
+    echo   - Syntax error in source files
+    echo.
+    echo Try these solutions:
+    echo   1. Close other dev servers using port 5173
+    echo   2. Delete node_modules and run this script again
+    echo   3. Check the error messages above for details
+    echo.
+    pause
+    exit /b %errorlevel%
+)
+
+pause

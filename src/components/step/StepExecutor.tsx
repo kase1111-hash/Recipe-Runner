@@ -43,7 +43,7 @@ export function StepExecutor({
     <div
       style={{
         minHeight: '100vh',
-        background: '#f9fafb',
+        background: 'var(--bg-secondary)',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -51,8 +51,8 @@ export function StepExecutor({
       {/* Header */}
       <header
         style={{
-          background: 'white',
-          borderBottom: '1px solid #e5e7eb',
+          background: 'var(--card-bg)',
+          borderBottom: '1px solid var(--border-primary)',
           padding: '1rem 2rem',
           position: 'sticky',
           top: 0,
@@ -72,10 +72,10 @@ export function StepExecutor({
             ← Exit
           </Button>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
               Step {currentStepIndex + 1} of {recipe.steps.length}
             </div>
-            <div style={{ fontWeight: 600, color: '#111827' }}>{recipe.name}</div>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{recipe.name}</div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <Button variant="ghost" onClick={() => setShowVisualSettings(true)}>
@@ -111,7 +111,7 @@ export function StepExecutor({
             style={{
               fontSize: '1.75rem',
               fontWeight: 700,
-              color: '#111827',
+              color: 'var(--text-primary)',
               margin: '0 0 0.5rem',
               textTransform: 'uppercase',
               letterSpacing: '0.025em',
@@ -125,14 +125,14 @@ export function StepExecutor({
               justifyContent: 'center',
               gap: '1rem',
               fontSize: '0.875rem',
-              color: '#6b7280',
+              color: 'var(--text-tertiary)',
             }}
           >
             <span>⏱ {currentStep.time_display}</span>
             <span>•</span>
             <span
               style={{
-                color: currentStep.type === 'active' ? '#2563eb' : '#6b7280',
+                color: currentStep.type === 'active' ? 'var(--accent-primary)' : 'var(--text-tertiary)',
                 fontWeight: 500,
               }}
             >
@@ -147,7 +147,7 @@ export function StepExecutor({
             style={{
               fontSize: '1.125rem',
               lineHeight: 1.7,
-              color: '#374151',
+              color: 'var(--text-secondary)',
               margin: 0,
             }}
           >
@@ -167,8 +167,8 @@ export function StepExecutor({
           <Card
             style={{
               marginBottom: '1.5rem',
-              background: '#fef3c7',
-              border: '1px solid #fcd34d',
+              background: 'var(--warning-bg)',
+              border: '1px solid var(--warning-border)',
             }}
           >
             <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -177,7 +177,7 @@ export function StepExecutor({
                 style={{
                   margin: 0,
                   fontSize: '0.875rem',
-                  color: '#92400e',
+                  color: 'var(--warning-text)',
                   lineHeight: 1.5,
                 }}
               >
@@ -204,18 +204,18 @@ export function StepExecutor({
           <Card
             style={{
               marginBottom: '1.5rem',
-              background: '#fee2e2',
-              border: '1px solid #fca5a5',
+              background: 'var(--error-bg)',
+              border: '1px solid var(--error-border)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span style={{ fontSize: '1.5rem' }}>🌡️</span>
               <div>
-                <div style={{ fontWeight: 600, color: '#dc2626' }}>
+                <div style={{ fontWeight: 600, color: 'var(--error)' }}>
                   {currentStep.temperature.value}{currentStep.temperature.unit}
                 </div>
                 {currentStep.temperature.target && (
-                  <div style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--error-text)' }}>
                     {currentStep.temperature.target}
                   </div>
                 )}
@@ -229,17 +229,17 @@ export function StepExecutor({
           <Card
             style={{
               marginBottom: '1.5rem',
-              background: '#dcfce7',
-              border: '1px solid #86efac',
+              background: 'var(--success-bg)',
+              border: '1px solid var(--success-border)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span style={{ fontSize: '1.5rem' }}>✅</span>
               <div>
-                <div style={{ fontWeight: 600, color: '#166534' }}>
+                <div style={{ fontWeight: 600, color: 'var(--success-text)' }}>
                   Safe Internal Temperature: {recipe.safe_temp.value}{recipe.safe_temp.unit}
                 </div>
-                <div style={{ fontSize: '0.875rem', color: '#15803d' }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--success)' }}>
                   Measure at: {recipe.safe_temp.location}
                 </div>
               </div>
@@ -251,8 +251,8 @@ export function StepExecutor({
       {/* Navigation Footer */}
       <footer
         style={{
-          background: 'white',
-          borderTop: '1px solid #e5e7eb',
+          background: 'var(--card-bg)',
+          borderTop: '1px solid var(--border-primary)',
           padding: '1rem 2rem',
           position: 'sticky',
           bottom: 0,

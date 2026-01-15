@@ -230,9 +230,9 @@ export function Timer({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0.75rem 1rem',
-          background: isOvertime ? '#fef2f2' : 'white',
+          background: isOvertime ? 'var(--error-bg)' : 'var(--card-bg)',
           borderRadius: '0.5rem',
-          border: `1px solid ${isOvertime ? '#fecaca' : '#e5e7eb'}`,
+          border: `1px solid ${isOvertime ? 'var(--error-border)' : 'var(--border-primary)'}`,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -241,7 +241,7 @@ export function Timer({
               width: '2.5rem',
               height: '2.5rem',
               borderRadius: '50%',
-              background: `conic-gradient(${isOvertime ? '#dc2626' : '#2563eb'} ${progress}%, #e5e7eb ${progress}%)`,
+              background: `conic-gradient(${isOvertime ? 'var(--error)' : 'var(--accent-primary)'} ${progress}%, var(--progress-track) ${progress}%)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -252,7 +252,7 @@ export function Timer({
                 width: '2rem',
                 height: '2rem',
                 borderRadius: '50%',
-                background: 'white',
+                background: 'var(--card-bg)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -265,14 +265,14 @@ export function Timer({
           </div>
           <div>
             {label && (
-              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{label}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{label}</div>
             )}
             <div
               style={{
                 fontSize: '1.125rem',
                 fontWeight: 600,
                 fontVariantNumeric: 'tabular-nums',
-                color: isOvertime ? '#dc2626' : '#111827',
+                color: isOvertime ? 'var(--error)' : 'var(--text-primary)',
                 fontFamily: 'ui-monospace, monospace',
               }}
             >
@@ -302,10 +302,10 @@ export function Timer({
   return (
     <div
       style={{
-        background: 'white',
+        background: 'var(--card-bg)',
         borderRadius: '1rem',
         padding: '1.5rem',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        boxShadow: 'var(--card-shadow)',
         textAlign: 'center',
       }}
     >
@@ -321,7 +321,7 @@ export function Timer({
           style={{
             fontSize: '0.875rem',
             fontWeight: 600,
-            color: '#6b7280',
+            color: 'var(--text-tertiary)',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
           }}
@@ -332,13 +332,13 @@ export function Timer({
           <div
             style={{
               fontSize: '0.75rem',
-              color: '#22c55e',
+              color: 'var(--success)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.25rem',
             }}
           >
-            <span style={{ width: '0.5rem', height: '0.5rem', borderRadius: '50%', background: '#22c55e' }} />
+            <span style={{ width: '0.5rem', height: '0.5rem', borderRadius: '50%', background: 'var(--success)' }} />
             Notifications on
           </div>
         )}
@@ -359,7 +359,7 @@ export function Timer({
             cy="80"
             r="70"
             fill="none"
-            stroke="#e5e7eb"
+            stroke="var(--progress-track)"
             strokeWidth="8"
           />
           <circle
@@ -367,7 +367,7 @@ export function Timer({
             cy="80"
             r="70"
             fill="none"
-            stroke={isOvertime ? '#dc2626' : '#2563eb'}
+            stroke={isOvertime ? 'var(--error)' : 'var(--accent-primary)'}
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={`${2 * Math.PI * 70}`}
@@ -389,14 +389,14 @@ export function Timer({
               fontSize: '2.5rem',
               fontWeight: 700,
               fontVariantNumeric: 'tabular-nums',
-              color: isOvertime ? '#dc2626' : '#111827',
+              color: isOvertime ? 'var(--error)' : 'var(--text-primary)',
               fontFamily: 'ui-monospace, monospace',
             }}
           >
             {formatTime(displayTime)}
           </div>
           {state !== 'idle' && (
-            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
               {formatTimeShort(totalSeconds)} total
             </div>
           )}

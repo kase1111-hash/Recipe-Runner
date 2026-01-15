@@ -47,7 +47,7 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'var(--overlay-bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -68,13 +68,13 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
             style={{
               fontSize: '1.5rem',
               fontWeight: 700,
-              color: '#111827',
+              color: 'var(--text-primary)',
               margin: '0 0 0.5rem',
             }}
           >
             Scale Recipe
           </h2>
-          <p style={{ color: '#6b7280', margin: '0 0 1.5rem' }}>
+          <p style={{ color: 'var(--text-tertiary)', margin: '0 0 1.5rem' }}>
             Adjust the yield to automatically recalculate ingredients
           </p>
 
@@ -89,19 +89,19 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
             }}
           >
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>
                 Original
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#6b7280' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>
                 {currentYield.value} {currentYield.unit}
               </div>
             </div>
-            <div style={{ fontSize: '1.5rem', color: '#9ca3af' }}>→</div>
+            <div style={{ fontSize: '1.5rem', color: 'var(--text-muted)' }}>→</div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>
                 Scaled
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#2563eb' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
                 {targetYield} {currentYield.unit}
               </div>
             </div>
@@ -113,11 +113,11 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
               textAlign: 'center',
               marginBottom: '1.5rem',
               padding: '0.5rem',
-              background: scaleFactor === 1 ? '#f3f4f6' : '#eff6ff',
+              background: scaleFactor === 1 ? 'var(--bg-tertiary)' : 'var(--accent-light)',
               borderRadius: '0.5rem',
             }}
           >
-            <span style={{ fontSize: '0.875rem', color: scaleFactor === 1 ? '#6b7280' : '#2563eb' }}>
+            <span style={{ fontSize: '0.875rem', color: scaleFactor === 1 ? 'var(--text-tertiary)' : 'var(--accent-primary)' }}>
               {scaleFactor === 1
                 ? 'Original recipe'
                 : scaleFactor > 1
@@ -173,9 +173,11 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
                 style={{
                   flex: 1,
                   padding: '0.5rem 0.75rem',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--border-secondary)',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
+                  background: 'var(--input-bg)',
+                  color: 'var(--text-primary)',
                 }}
               />
               <Button size="sm" onClick={handleCustomSubmit}>
@@ -190,7 +192,7 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
               style={{
                 fontSize: '0.875rem',
                 fontWeight: 600,
-                color: '#374151',
+                color: 'var(--text-secondary)',
                 marginBottom: '0.75rem',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
@@ -200,7 +202,7 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
             </h3>
             <div
               style={{
-                background: '#f9fafb',
+                background: 'var(--bg-secondary)',
                 borderRadius: '0.5rem',
                 padding: '0.75rem',
                 maxHeight: '250px',
@@ -215,7 +217,7 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
                     justifyContent: 'space-between',
                     alignItems: 'flex-start',
                     padding: '0.5rem 0',
-                    borderBottom: idx < scaledRecipe.scaledIngredients.length - 1 ? '1px solid #e5e7eb' : 'none',
+                    borderBottom: idx < scaledRecipe.scaledIngredients.length - 1 ? '1px solid var(--border-primary)' : 'none',
                   }}
                 >
                   <div style={{ flex: 1 }}>
@@ -223,20 +225,20 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
                       <span
                         style={{
                           fontWeight: 600,
-                          color: ing.scaledAmount !== ing.originalAmount ? '#2563eb' : '#374151',
+                          color: ing.scaledAmount !== ing.originalAmount ? 'var(--accent-primary)' : 'var(--text-secondary)',
                         }}
                       >
                         {ing.scaledAmount} {ing.unit}
                       </span>
-                      <span style={{ color: '#374151' }}>{ing.item}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{ing.item}</span>
                       {ing.prep && (
-                        <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                        <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
                           ({ing.prep})
                         </span>
                       )}
                     </div>
                     {ing.scaledAmount !== ing.originalAmount && (
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         was: {ing.originalAmount} {ing.unit}
                       </div>
                     )}
@@ -244,7 +246,7 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
                       <div
                         style={{
                           fontSize: '0.75rem',
-                          color: '#d97706',
+                          color: 'var(--warning)',
                           marginTop: '0.25rem',
                           display: 'flex',
                           alignItems: 'center',
@@ -264,8 +266,8 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
           {scaledRecipe.scalingNotes.length > 0 && (
             <div
               style={{
-                background: '#fffbeb',
-                border: '1px solid #fde68a',
+                background: 'var(--warning-bg)',
+                border: '1px solid var(--warning-border)',
                 borderRadius: '0.5rem',
                 padding: '0.75rem',
                 marginBottom: '1.5rem',
@@ -275,14 +277,14 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
                 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: '#92400e',
+                  color: 'var(--warning-text)',
                   margin: '0 0 0.5rem',
                   textTransform: 'uppercase',
                 }}
               >
                 Scaling Notes
               </h4>
-              <ul style={{ margin: 0, paddingLeft: '1rem', color: '#92400e', fontSize: '0.875rem' }}>
+              <ul style={{ margin: 0, paddingLeft: '1rem', color: 'var(--warning-text)', fontSize: '0.875rem' }}>
                 {scaledRecipe.scalingNotes.map((note, idx) => (
                   <li key={idx} style={{ marginBottom: '0.25rem' }}>{note}</li>
                 ))}
