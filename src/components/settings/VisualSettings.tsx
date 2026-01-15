@@ -255,17 +255,13 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                     color: 'var(--text-primary)',
                   }}
                 >
-                  <option value="local">Local (Ollama) - Not recommended</option>
                   <option value="sdwebui">Stable Diffusion WebUI (Local, Free)</option>
-                  <option value="openai">OpenAI DALL-E 3</option>
-                  <option value="stability">Stability AI (SDXL)</option>
+                  <option value="openai">OpenAI DALL-E 3 (Paid)</option>
+                  <option value="stability">Stability AI SDXL (Paid)</option>
                 </select>
 
                 {/* Provider info */}
                 <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                  {settings.apiProvider === 'local' && (
-                    <>Ollama doesn't support image generation. Use SD WebUI instead.</>
-                  )}
                   {settings.apiProvider === 'sdwebui' && (
                     <>Free local generation. Requires AUTOMATIC1111 WebUI running with --api flag.</>
                   )}

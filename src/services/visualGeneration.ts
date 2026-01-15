@@ -121,52 +121,16 @@ async function generateImage(prompt: string, settings: VisualSettings): Promise<
 }
 
 /**
- * Generate image using Ollama's API (if vision model available)
+ * Ollama does NOT support image generation - this provides a helpful error
  */
-async function generateWithOllama(prompt: string): Promise<string> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.timeout_ms);
-
-  try {
-    const response = await fetch(`${config.endpoint}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: config.model,
-        prompt: `Generate an image: ${prompt}`,
-        stream: false,
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`Ollama request failed (${response.status}): ${errorText || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-
-    // If the model returns image data
-    if (data.images && data.images[0]) {
-      return `data:image/png;base64,${data.images[0]}`;
-    }
-
-    // Otherwise throw with details
-    throw new Error(`No image data in response. Model "${config.model}" may not support image generation. Response: ${JSON.stringify(data).slice(0, 200)}`);
-  } catch (err) {
-    if (err instanceof Error) {
-      if (err.name === 'AbortError') {
-        throw new Error(`Request timed out after ${config.timeout_ms / 1000}s. Is Ollama running at ${config.endpoint}?`);
-      }
-      if (err.message.includes('fetch')) {
-        throw new Error(`Cannot connect to Ollama at ${config.endpoint}. Make sure Ollama is running (ollama serve).`);
-      }
-      throw err;
-    }
-    throw new Error(`Image generation failed: ${String(err)}`);
-  } finally {
-    clearTimeout(timeout);
-  }
+async function generateWithOllama(_prompt: string): Promise<string> {
+  throw new Error(
+    'Ollama cannot generate images (text-only). ' +
+    'Go to Settings > Visual Generation and select either:\n' +
+    '• SD WebUI (free, local) - requires Stable Diffusion WebUI\n' +
+    '• OpenAI (paid) - requires API key\n' +
+    '• Stability AI (paid) - requires API key'
+  );
 }
 
 // ============================================
@@ -556,7 +520,7 @@ const defaultVisualSettings: VisualSettings = {
   autoGenerate: true,
   prefetchEnabled: true,
   prefetchCount: 2,
-  apiProvider: 'local',
+  apiProvider: 'sdwebui',
   sdwebuiEndpoint: 'http://localhost:7860',
 };
 
@@ -564,7 +528,13 @@ export function getVisualSettings(): VisualSettings {
   try {
     const stored = localStorage.getItem(VISUAL_SETTINGS_KEY);
     if (stored) {
-      return { ...defaultVisualSettings, ...JSON.parse(stored) };
+      const parsed = { ...defaultVisualSettings, ...JSON.parse(stored) };
+      // Auto-migrate from 'local' (doesn't work) to 'sdwebui' (works)
+      if (parsed.apiProvider === 'local') {
+        parsed.apiProvider = 'sdwebui';
+        localStorage.setItem(VISUAL_SETTINGS_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
     }
   } catch {
     // Ignore parse errors
