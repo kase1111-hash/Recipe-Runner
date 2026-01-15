@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, Button } from '../common';
+import { VisualSettings } from '../settings/VisualSettings';
 import { getAllCookbooks } from '../../db';
 import type { Cookbook } from '../../types';
 
 interface CookbookLibraryProps {
   onSelectCookbook: (cookbook: Cookbook) => void;
   onOpenMealPlanner?: () => void;
+  onOpenInventory?: () => void;
 }
 
 const categoryIcons: Record<string, string> = {
@@ -17,9 +19,10 @@ const categoryIcons: Record<string, string> = {
   craft: '🛠️',
 };
 
-export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner }: CookbookLibraryProps) {
+export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInventory }: CookbookLibraryProps) {
   const [cookbooks, setCookbooks] = useState<Cookbook[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showVisualSettings, setShowVisualSettings] = useState(false);
 
   useEffect(() => {
     loadCookbooks();
@@ -70,6 +73,14 @@ export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner }: Cookboo
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Button variant="ghost" onClick={() => setShowVisualSettings(true)} title="Visual Settings">
+            ⚙️
+          </Button>
+          {onOpenInventory && (
+            <Button variant="secondary" onClick={onOpenInventory}>
+              Inventory
+            </Button>
+          )}
           {onOpenMealPlanner && (
             <Button variant="primary" onClick={onOpenMealPlanner}>
               Meal Planner
@@ -200,6 +211,11 @@ export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner }: Cookboo
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Visual Settings Modal */}
+      {showVisualSettings && (
+        <VisualSettings onClose={() => setShowVisualSettings(false)} />
       )}
     </div>
   );

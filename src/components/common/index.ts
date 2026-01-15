@@ -4,3 +4,5 @@ export { Timer } from './Timer';
 export { ProgressBar } from './ProgressBar';
 export { DifficultyBadge } from './DifficultyBadge';
 export { NutritionDisplay, NutritionBadge } from './NutritionDisplay';
+export { CostDisplay, CostBadge, RecipeCostBadge } from './CostDisplay';
+export { ShareModal, ShareButton } from './ShareModal';

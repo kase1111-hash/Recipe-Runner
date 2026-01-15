@@ -7,13 +7,14 @@ import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
 import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
 import { MealPlanner, MealPlanGroceryList } from './components/mealplan';
+import { InventoryManager } from './components/inventory';
 import { initializeDatabase, getRecipe } from './db';
 import { seedSampleData } from './data/sampleCookbook';
 import type { Cookbook, Recipe, Ingredient } from './types';
 import type { ParsedRecipe } from './services/recipeParser';
 import type { ScaledRecipe } from './services/recipeScaling';
 
-type AppView = 'library' | 'cookbook' | 'detail' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete' | 'mealplanner' | 'mealplangroceries';
+type AppView = 'library' | 'cookbook' | 'detail' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete' | 'mealplanner' | 'mealplangroceries' | 'inventory';
 
 function App() {
   const [initialized, setInitialized] = useState(false);
@@ -191,12 +192,21 @@ function App() {
     setView('mealplanner');
   }
 
+  function handleOpenInventory() {
+    setView('inventory');
+  }
+
+  function handleBackFromInventory() {
+    setView('library');
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       {view === 'library' && (
         <CookbookLibrary
           onSelectCookbook={handleSelectCookbook}
           onOpenMealPlanner={handleOpenMealPlanner}
+          onOpenInventory={handleOpenInventory}
         />
       )}
 
@@ -283,6 +293,12 @@ function App() {
         <MealPlanGroceryList
           planId={selectedMealPlanId}
           onBack={handleBackFromMealPlanGroceries}
+        />
+      )}
+
+      {view === 'inventory' && (
+        <InventoryManager
+          onBack={handleBackFromInventory}
         />
       )}
 

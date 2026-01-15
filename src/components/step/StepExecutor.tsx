@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, Button, Timer, ProgressBar } from '../common';
-import { generateStepVisual } from '../../services/visualGeneration';
-import type { Recipe, VisualGenerationResult } from '../../types';
+import { StepVisual } from './StepVisual';
+import { VisualSettings } from '../settings/VisualSettings';
+import type { Recipe } from '../../types';
 
 interface StepExecutorProps {
   recipe: Recipe;
@@ -18,47 +19,11 @@ export function StepExecutor({
   onBack,
 }: StepExecutorProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [stepVisual, setStepVisual] = useState<VisualGenerationResult | null>(null);
-  const [loadingVisual, setLoadingVisual] = useState(false);
-  const [visualError, setVisualError] = useState<string | null>(null);
+  const [showVisualSettings, setShowVisualSettings] = useState(false);
 
   const currentStep = recipe.steps[currentStepIndex];
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === recipe.steps.length - 1;
-
-  // Load visual for current step
-  useEffect(() => {
-    loadStepVisual();
-  }, [currentStepIndex]);
-
-  async function loadStepVisual() {
-    if (!currentStep.visual_prompt) {
-      setStepVisual(null);
-      return;
-    }
-
-    setLoadingVisual(true);
-    setVisualError(null);
-
-    try {
-      const result = await generateStepVisual({
-        recipe_id: recipe.id,
-        step_index: currentStep.index,
-        visual_prompt: currentStep.visual_prompt,
-      });
-      setStepVisual(result);
-    } catch (error) {
-      console.error('Failed to generate step visual:', error);
-      setVisualError('Could not generate visual');
-    } finally {
-      setLoadingVisual(false);
-    }
-  }
-
-  async function regenerateVisual() {
-    setStepVisual(null);
-    await loadStepVisual();
-  }
 
   function goToNextStep() {
     if (isLastStep) {
@@ -112,9 +77,14 @@ export function StepExecutor({
             </div>
             <div style={{ fontWeight: 600, color: '#111827' }}>{recipe.name}</div>
           </div>
-          <Button variant="ghost" onClick={onOpenChef}>
-            👨‍🍳 Help
-          </Button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button variant="ghost" onClick={() => setShowVisualSettings(true)}>
+              ⚙️
+            </Button>
+            <Button variant="ghost" onClick={onOpenChef}>
+              👨‍🍳 Help
+            </Button>
+          </div>
         </div>
         <div style={{ maxWidth: '1000px', margin: '0.75rem auto 0' }}>
           <ProgressBar
@@ -185,93 +155,12 @@ export function StepExecutor({
           </p>
         </Card>
 
-        {/* Visual Reference (Phase 2 Core Feature) */}
-        {currentStep.visual_prompt && (
-          <Card style={{ marginBottom: '1.5rem' }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '0.75rem',
-              }}
-            >
-              <h3 style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280', fontWeight: 600 }}>
-                👁️ Visual Reference
-              </h3>
-              {stepVisual && !loadingVisual && (
-                <Button variant="ghost" size="sm" onClick={regenerateVisual}>
-                  ↻ Regenerate
-                </Button>
-              )}
-            </div>
-
-            {loadingVisual && (
-              <div
-                style={{
-                  height: '256px',
-                  background: '#f3f4f6',
-                  borderRadius: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#6b7280',
-                }}
-              >
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎨</div>
-                  <div>Generating visual...</div>
-                </div>
-              </div>
-            )}
-
-            {stepVisual && !loadingVisual && (
-              <img
-                src={stepVisual.image_url}
-                alt={`Visual reference for step ${currentStep.index + 1}`}
-                style={{
-                  width: '100%',
-                  borderRadius: '0.5rem',
-                  border: '1px solid #e5e7eb',
-                }}
-              />
-            )}
-
-            {visualError && !loadingVisual && (
-              <div
-                style={{
-                  padding: '1rem',
-                  background: '#fef2f2',
-                  borderRadius: '0.5rem',
-                  color: '#dc2626',
-                  fontSize: '0.875rem',
-                  textAlign: 'center',
-                }}
-              >
-                {visualError}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={regenerateVisual}
-                  style={{ marginLeft: '0.5rem' }}
-                >
-                  Try Again
-                </Button>
-              </div>
-            )}
-
-            <p
-              style={{
-                marginTop: '0.75rem',
-                fontSize: '0.875rem',
-                color: '#6b7280',
-                fontStyle: 'italic',
-              }}
-            >
-              {currentStep.visual_prompt}
-            </p>
-          </Card>
-        )}
+        {/* Visual Reference (Phase 8 Enhanced) */}
+        <StepVisual
+          recipeId={recipe.id}
+          step={currentStep}
+          allSteps={recipe.steps}
+        />
 
         {/* Tip */}
         {currentStep.tip && (
@@ -391,6 +280,11 @@ export function StepExecutor({
           </Button>
         </div>
       </footer>
+
+      {/* Visual Settings Modal */}
+      {showVisualSettings && (
+        <VisualSettings onClose={() => setShowVisualSettings(false)} />
+      )}
     </div>
   );
 }
