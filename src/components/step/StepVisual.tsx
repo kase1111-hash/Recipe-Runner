@@ -128,7 +128,7 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
           marginBottom: '0.75rem',
         }}
       >
-        <h3 style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280', fontWeight: 600 }}>
+        <h3 style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
           👁️ Visual Reference
         </h3>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -163,7 +163,7 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
             overflowX: 'auto',
             paddingBottom: '0.75rem',
             marginBottom: '0.75rem',
-            borderBottom: '1px solid #e5e7eb',
+            borderBottom: '1px solid var(--border-primary)',
           }}
         >
           {versions.map((v) => (
@@ -175,11 +175,11 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
                 width: '80px',
                 height: '80px',
                 padding: 0,
-                border: selectedVersion === v.version ? '3px solid #2563eb' : '1px solid #e5e7eb',
+                border: selectedVersion === v.version ? '3px solid var(--accent-primary)' : '1px solid var(--border-primary)',
                 borderRadius: '0.5rem',
                 overflow: 'hidden',
                 cursor: 'pointer',
-                background: 'white',
+                background: 'var(--card-bg)',
               }}
             >
               <img
@@ -201,12 +201,12 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
         <div
           style={{
             height: '256px',
-            background: '#f3f4f6',
+            background: 'var(--bg-tertiary)',
             borderRadius: '0.5rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#6b7280',
+            color: 'var(--text-tertiary)',
           }}
         >
           <div style={{ textAlign: 'center' }}>
@@ -225,7 +225,7 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
             style={{
               width: '100%',
               borderRadius: '0.5rem',
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--border-primary)',
             }}
           />
           {regenerating && (
@@ -233,14 +233,14 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
               style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'rgba(255,255,255,0.8)',
+                background: 'var(--overlay-light)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '0.5rem',
               }}
             >
-              <div style={{ textAlign: 'center', color: '#6b7280' }}>
+              <div style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎨</div>
                 <div>Generating new version...</div>
               </div>
@@ -252,8 +252,8 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
                 position: 'absolute',
                 top: '0.5rem',
                 right: '0.5rem',
-                background: 'rgba(0,0,0,0.6)',
-                color: 'white',
+                background: 'var(--overlay-bg)',
+                color: 'var(--btn-primary-text)',
                 padding: '0.25rem 0.5rem',
                 borderRadius: '0.25rem',
                 fontSize: '0.625rem',
@@ -271,9 +271,9 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
         <div
           style={{
             padding: '1rem',
-            background: '#fef2f2',
+            background: 'var(--error-bg)',
             borderRadius: '0.5rem',
-            color: '#dc2626',
+            color: 'var(--error)',
             fontSize: '0.875rem',
             textAlign: 'center',
           }}
@@ -296,7 +296,7 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
           marginTop: '0.75rem',
           marginBottom: 0,
           fontSize: '0.875rem',
-          color: '#6b7280',
+          color: 'var(--text-tertiary)',
           fontStyle: 'italic',
         }}
       >
@@ -309,7 +309,7 @@ export function StepVisual({ recipeId, step, allSteps, onVisualLoad }: StepVisua
           style={{
             marginTop: '0.5rem',
             fontSize: '0.75rem',
-            color: '#9ca3af',
+            color: 'var(--text-muted)',
           }}
         >
           Version {visual.version} of {versions.length || 1}
@@ -360,12 +360,12 @@ export function StepVisualPreview({ recipeId, step, size = 'md' }: StepVisualPre
         style={{
           width: sizes[size].width,
           height: sizes[size].height,
-          background: '#f3f4f6',
+          background: 'var(--bg-tertiary)',
           borderRadius: '0.375rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#9ca3af',
+          color: 'var(--text-muted)',
           fontSize: size === 'sm' ? '1rem' : '1.5rem',
         }}
       >
@@ -383,7 +383,7 @@ export function StepVisualPreview({ recipeId, step, size = 'md' }: StepVisualPre
         height: sizes[size].height,
         objectFit: 'cover',
         borderRadius: '0.375rem',
-        border: '1px solid #e5e7eb',
+        border: '1px solid var(--border-primary)',
       }}
     />
   );

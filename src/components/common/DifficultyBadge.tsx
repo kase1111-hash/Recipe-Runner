@@ -42,7 +42,7 @@ export function DifficultyBadge({ score, showDetails = false }: DifficultyBadgeP
             gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '0.5rem',
             fontSize: '0.75rem',
-            color: '#6b7280',
+            color: 'var(--text-tertiary)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -77,7 +77,7 @@ function ScoreIndicator({ value }: { value: number }) {
             width: '0.5rem',
             height: '0.5rem',
             borderRadius: '2px',
-            background: i <= value ? DifficultyLabels[value].color : '#e5e7eb',
+            background: i <= value ? DifficultyLabels[value].color : 'var(--progress-track)',
           }}
         />
       ))}

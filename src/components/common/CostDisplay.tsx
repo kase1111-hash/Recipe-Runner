@@ -37,30 +37,30 @@ export function CostDisplay({ recipe, compact = false }: CostDisplayProps) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '1.25rem' }}>💰</span>
-          <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151', margin: 0 }}>
+          <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>
             Estimated Cost
           </h3>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontWeight: 600, color: '#111827' }}>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
               {formatCurrency(cost.totalCost)}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
               {formatCurrency(cost.costPerServing)}/serving
             </div>
           </div>
           <ConfidenceBadge confidence={cost.confidence} />
-          <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+          <span style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
             {expanded ? '▲' : '▼'}
           </span>
         </div>
       </div>
 
       {expanded && (
-        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-primary)' }}>
           {/* Cost Breakdown */}
-          <h4 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', margin: '0 0 0.75rem', textTransform: 'uppercase' }}>
+          <h4 style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', margin: '0 0 0.75rem', textTransform: 'uppercase' }}>
             Cost Breakdown
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -72,13 +72,13 @@ export function CostDisplay({ recipe, compact = false }: CostDisplayProps) {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '0.375rem 0.5rem',
-                  background: index % 2 === 0 ? '#f9fafb' : 'white',
+                  background: index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--card-bg)',
                   borderRadius: '0.25rem',
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: '0.875rem', color: '#374151' }}>{ic.name}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginLeft: '0.5rem' }}>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{ic.name}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
                     ({ic.amount} {ic.unit})
                   </span>
                 </div>
@@ -87,7 +87,7 @@ export function CostDisplay({ recipe, compact = false }: CostDisplayProps) {
                     style={{
                       width: '60px',
                       height: '4px',
-                      background: '#e5e7eb',
+                      background: 'var(--progress-track)',
                       borderRadius: '2px',
                       overflow: 'hidden',
                     }}
@@ -96,19 +96,19 @@ export function CostDisplay({ recipe, compact = false }: CostDisplayProps) {
                       style={{
                         width: `${Math.min(100, ic.percentOfTotal)}%`,
                         height: '100%',
-                        background: '#10b981',
+                        background: 'var(--success)',
                         borderRadius: '2px',
                       }}
                     />
                   </div>
-                  <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827', minWidth: '50px', textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)', minWidth: '50px', textAlign: 'right' }}>
                     {formatCurrency(ic.totalCost)}
                   </span>
                 </div>
               </div>
             ))}
             {cost.ingredients.length > 8 && (
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', padding: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', textAlign: 'center', padding: '0.25rem' }}>
                 +{cost.ingredients.length - 8} more ingredients
               </div>
             )}
@@ -120,14 +120,14 @@ export function CostDisplay({ recipe, compact = false }: CostDisplayProps) {
               style={{
                 marginTop: '1rem',
                 padding: '0.75rem',
-                background: '#fef3c7',
+                background: 'var(--warning-bg)',
                 borderRadius: '0.375rem',
               }}
             >
-              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#92400e', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--warning-text)', marginBottom: '0.25rem' }}>
                 Missing Prices ({cost.unknownIngredients.length})
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#92400e' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--warning-text)' }}>
                 {cost.unknownIngredients.slice(0, 5).join(', ')}
                 {cost.unknownIngredients.length > 5 && ` and ${cost.unknownIngredients.length - 5} more`}
               </div>
@@ -135,7 +135,7 @@ export function CostDisplay({ recipe, compact = false }: CostDisplayProps) {
           )}
 
           {/* Cost Savings Tips */}
-          <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#6b7280' }}>
+          <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
             <strong>Tip:</strong> The most expensive ingredient is {cost.ingredients[0]?.name || 'unknown'}{' '}
             ({Math.round(cost.ingredients[0]?.percentOfTotal || 0)}% of total cost).
           </div>
@@ -158,10 +158,10 @@ export function CostBadge({ cost }: CostBadgeProps) {
         alignItems: 'center',
         gap: '0.375rem',
         padding: '0.25rem 0.5rem',
-        background: '#d1fae5',
+        background: 'var(--success-bg)',
         borderRadius: '9999px',
         fontSize: '0.75rem',
-        color: '#065f46',
+        color: 'var(--success-text)',
       }}
     >
       <span>💰</span>
@@ -182,10 +182,10 @@ export function RecipeCostBadge({ recipe }: RecipeCostBadgeProps) {
 
 // Confidence Badge
 function ConfidenceBadge({ confidence }: { confidence: 'high' | 'medium' | 'low' }) {
-  const colors = {
-    high: { bg: '#d1fae5', text: '#065f46' },
-    medium: { bg: '#fef3c7', text: '#92400e' },
-    low: { bg: '#fee2e2', text: '#991b1b' },
+  const styles = {
+    high: { bg: 'var(--success-bg)', text: 'var(--success-text)' },
+    medium: { bg: 'var(--warning-bg)', text: 'var(--warning-text)' },
+    low: { bg: 'var(--error-bg)', text: 'var(--error-text)' },
   };
 
   const labels = {
@@ -198,8 +198,8 @@ function ConfidenceBadge({ confidence }: { confidence: 'high' | 'medium' | 'low'
     <span
       style={{
         padding: '0.125rem 0.375rem',
-        background: colors[confidence].bg,
-        color: colors[confidence].text,
+        background: styles[confidence].bg,
+        color: styles[confidence].text,
         borderRadius: '0.25rem',
         fontSize: '0.625rem',
         fontWeight: 500,

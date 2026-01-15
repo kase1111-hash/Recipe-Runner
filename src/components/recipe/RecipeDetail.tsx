@@ -57,13 +57,13 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
               style={{
                 fontSize: '2rem',
                 fontWeight: 700,
-                color: '#111827',
+                color: 'var(--text-primary)',
                 margin: '0 0 0.5rem',
               }}
             >
               {recipe.name}
             </h1>
-            <p style={{ color: '#6b7280', margin: '0 0 1rem' }}>
+            <p style={{ color: 'var(--text-tertiary)', margin: '0 0 1rem' }}>
               {recipe.description}
             </p>
 
@@ -71,26 +71,26 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>⏱</span>
-                <span style={{ color: '#374151', fontSize: '0.875rem' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                   {recipe.total_time}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>🍽</span>
-                <span style={{ color: '#374151', fontSize: '0.875rem' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                   {recipe.yield}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>📋</span>
-                <span style={{ color: '#374151', fontSize: '0.875rem' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                   {recipe.steps.length} steps
                 </span>
               </div>
               {recipe.safe_temp && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>🌡️</span>
-                  <span style={{ color: '#374151', fontSize: '0.875rem' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                     {recipe.safe_temp.value}{recipe.safe_temp.unit}
                   </span>
                 </div>
@@ -115,29 +115,29 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
         <Card style={{ marginBottom: '1.5rem', padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
             <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {cookCount}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                 Times Cooked
               </div>
             </div>
             {avgRating > 0 && (
               <div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {'⭐'.repeat(Math.round(avgRating))}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                   Avg Rating ({avgRating.toFixed(1)})
                 </div>
               </div>
             )}
             {lastCooked && (
               <div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {lastCooked.toLocaleDateString()}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                   Last Cooked
                 </div>
               </div>
@@ -152,7 +152,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
           display: 'flex',
           gap: '0.25rem',
           marginBottom: '1rem',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--border-primary)',
         }}
       >
         {(['overview', 'ingredients', 'history'] as Tab[]).map((tab) => (
@@ -163,10 +163,10 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
               padding: '0.75rem 1rem',
               fontSize: '0.875rem',
               fontWeight: 500,
-              color: activeTab === tab ? '#2563eb' : '#6b7280',
+              color: activeTab === tab ? 'var(--accent-primary)' : 'var(--text-tertiary)',
               background: 'none',
               border: 'none',
-              borderBottom: activeTab === tab ? '2px solid #2563eb' : '2px solid transparent',
+              borderBottom: activeTab === tab ? '2px solid var(--accent-primary)' : '2px solid transparent',
               cursor: 'pointer',
               textTransform: 'capitalize',
             }}
@@ -187,10 +187,10 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                 position: 'absolute',
                 top: '100%',
                 right: 0,
-                background: 'white',
+                background: 'var(--card-bg)',
                 borderRadius: '0.5rem',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                border: '1px solid #e5e7eb',
+                boxShadow: 'var(--card-shadow-lg)',
+                border: '1px solid var(--border-primary)',
                 padding: '0.5rem',
                 zIndex: 100,
                 minWidth: '150px',
@@ -207,6 +207,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
+                  color: 'var(--text-primary)',
                 }}
               >
                 📄 Markdown
@@ -222,6 +223,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
+                  color: 'var(--text-primary)',
                 }}
               >
                 📋 JSON
@@ -237,11 +239,12 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
+                  color: 'var(--text-primary)',
                 }}
               >
                 📝 Text
               </button>
-              <hr style={{ margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e7eb' }} />
+              <hr style={{ margin: '0.5rem 0', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
               <button
                 onClick={() => { handleCopyRecipe(); setShowExport(false); }}
                 style={{
@@ -253,6 +256,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
+                  color: 'var(--text-primary)',
                 }}
               >
                 📋 Copy to clipboard
@@ -267,8 +271,8 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
         <div
           style={{
             padding: '0.75rem',
-            background: '#dcfce7',
-            color: '#166534',
+            background: 'var(--success-bg)',
+            color: 'var(--success-text)',
             borderRadius: '0.375rem',
             marginBottom: '1rem',
             fontSize: '0.875rem',
@@ -284,7 +288,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
           {/* Equipment */}
           {recipe.equipment.length > 0 && (
             <Card style={{ marginBottom: '1rem', padding: '1rem' }}>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151', margin: '0 0 0.75rem' }}>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>
                 🔧 Equipment
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -293,10 +297,10 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                     key={idx}
                     style={{
                       padding: '0.25rem 0.75rem',
-                      background: '#f3f4f6',
+                      background: 'var(--bg-secondary)',
                       borderRadius: '9999px',
                       fontSize: '0.875rem',
-                      color: '#374151',
+                      color: 'var(--text-secondary)',
                     }}
                   >
                     {eq}
@@ -318,7 +322,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
 
           {/* Steps Preview */}
           <Card style={{ padding: '1rem' }}>
-            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151', margin: '0 0 0.75rem' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>
               📋 Steps Overview
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -330,7 +334,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                     alignItems: 'flex-start',
                     gap: '0.75rem',
                     padding: '0.5rem',
-                    background: '#f9fafb',
+                    background: 'var(--bg-secondary)',
                     borderRadius: '0.375rem',
                   }}
                 >
@@ -339,8 +343,8 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                       width: '1.5rem',
                       height: '1.5rem',
                       borderRadius: '50%',
-                      background: step.type === 'passive' ? '#dbeafe' : '#dcfce7',
-                      color: step.type === 'passive' ? '#1d4ed8' : '#166534',
+                      background: step.type === 'passive' ? 'var(--info-bg)' : 'var(--success-bg)',
+                      color: step.type === 'passive' ? 'var(--accent-primary)' : 'var(--success-text)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -352,11 +356,11 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                     {step.index + 1}
                   </span>
                   <div>
-                    <div style={{ fontWeight: 500, color: '#374151', fontSize: '0.875rem' }}>
+                    <div style={{ fontWeight: 500, color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                       {step.title}
                     </div>
                     {step.time_display && (
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                         {step.time_display} • {step.type}
                       </div>
                     )}
@@ -370,7 +374,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
 
       {activeTab === 'ingredients' && (
         <Card style={{ padding: '1rem' }}>
-          <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151', margin: '0 0 0.75rem' }}>
+          <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>
             🥬 Ingredients ({recipe.ingredients.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -381,18 +385,18 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                   display: 'flex',
                   alignItems: 'flex-start',
                   padding: '0.5rem',
-                  borderBottom: idx < recipe.ingredients.length - 1 ? '1px solid #e5e7eb' : 'none',
+                  borderBottom: idx < recipe.ingredients.length - 1 ? '1px solid var(--border-primary)' : 'none',
                 }}
               >
-                <span style={{ fontWeight: 600, color: '#374151', minWidth: '80px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)', minWidth: '80px' }}>
                   {ing.amount} {ing.unit}
                 </span>
-                <span style={{ color: '#374151' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>
                   {ing.item}
-                  {ing.prep && <span style={{ color: '#6b7280' }}>, {ing.prep}</span>}
+                  {ing.prep && <span style={{ color: 'var(--text-tertiary)' }}>, {ing.prep}</span>}
                 </span>
                 {ing.optional && (
-                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                     optional
                   </span>
                 )}
@@ -407,8 +411,8 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
           {cookCount === 0 ? (
             <Card style={{ textAlign: 'center', padding: '3rem' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
-              <h3 style={{ color: '#374151', margin: '0 0 0.5rem' }}>No Cook History Yet</h3>
-              <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+              <h3 style={{ color: 'var(--text-secondary)', margin: '0 0 0.5rem' }}>No Cook History Yet</h3>
+              <p style={{ color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
                 Start cooking to track your progress!
               </p>
               <Button onClick={onStartCooking}>Start Cooking</Button>
@@ -419,7 +423,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                 <Card key={idx} style={{ padding: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                     <div>
-                      <div style={{ fontWeight: 600, color: '#374151' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
                         {new Date(entry.date).toLocaleDateString('en-US', {
                           weekday: 'long',
                           year: 'numeric',
@@ -427,7 +431,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                           day: 'numeric',
                         })}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                         {entry.completed ? '✓ Completed' : '◐ Partially completed'}
                       </div>
                     </div>
@@ -440,10 +444,10 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
 
                   {entry.adjustments.length > 0 && (
                     <div style={{ marginTop: '0.75rem' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '0.25rem' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>
                         Adjustments:
                       </div>
-                      <ul style={{ margin: 0, paddingLeft: '1rem', fontSize: '0.875rem', color: '#374151' }}>
+                      <ul style={{ margin: 0, paddingLeft: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                         {entry.adjustments.map((adj, i) => (
                           <li key={i}>{adj}</li>
                         ))}
@@ -453,10 +457,10 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
 
                   {entry.notes && (
                     <div style={{ marginTop: '0.75rem' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '0.25rem' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>
                         Notes:
                       </div>
-                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151' }}>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                         {entry.notes}
                       </p>
                     </div>
@@ -478,8 +482,8 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
                 style={{
                   fontSize: '0.75rem',
                   padding: '0.25rem 0.75rem',
-                  background: '#eff6ff',
-                  color: '#1d4ed8',
+                  background: 'var(--accent-light)',
+                  color: 'var(--accent-primary)',
                   borderRadius: '9999px',
                 }}
               >

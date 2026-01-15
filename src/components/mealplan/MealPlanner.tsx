@@ -138,18 +138,18 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
           <Button variant="ghost" onClick={onBack} style={{ marginBottom: '1rem' }}>
             ← Back
           </Button>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#111827', margin: '0 0 0.5rem' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>
             Meal Planning
           </h1>
-          <p style={{ color: '#6b7280', margin: 0 }}>Plan your weekly meals</p>
+          <p style={{ color: 'var(--text-tertiary)', margin: 0 }}>Plan your weekly meals</p>
         </header>
 
         <Card style={{ textAlign: 'center', padding: '3rem' }}>
           <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📅</div>
-          <h2 style={{ fontSize: '1.5rem', color: '#111827', margin: '0 0 0.5rem' }}>
+          <h2 style={{ fontSize: '1.5rem', color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>
             No Active Meal Plan
           </h2>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--text-tertiary)', marginBottom: '1.5rem' }}>
             Create a weekly plan to organize your cooking
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -182,10 +182,10 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
         </Button>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#111827', margin: '0 0 0.25rem' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.25rem' }}>
               {plan.name}
             </h1>
-            <p style={{ color: '#6b7280', margin: 0 }}>
+            <p style={{ color: 'var(--text-tertiary)', margin: 0 }}>
               {formatDateDisplay(new Date(plan.startDate + 'T00:00:00'))} -{' '}
               {formatDateDisplay(new Date(plan.endDate + 'T00:00:00'))}
             </p>
@@ -206,16 +206,16 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
         <Card style={{ marginBottom: '1.5rem', padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>{stats.totalMeals}</div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Meals Planned</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{stats.totalMeals}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Meals Planned</div>
             </div>
             <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>{stats.uniqueRecipes}</div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Unique Recipes</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{stats.uniqueRecipes}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Unique Recipes</div>
             </div>
             <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>{stats.daysPlanned}/7</div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Days Planned</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{stats.daysPlanned}/7</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Days Planned</div>
             </div>
           </div>
         </Card>
@@ -241,7 +241,7 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
               style={{
                 minWidth: '140px',
                 padding: '0.75rem',
-                border: isToday ? '2px solid #2563eb' : undefined,
+                border: isToday ? '2px solid var(--accent-primary)' : undefined,
               }}
             >
               <div
@@ -249,13 +249,13 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
                   textAlign: 'center',
                   marginBottom: '0.75rem',
                   paddingBottom: '0.5rem',
-                  borderBottom: '1px solid #e5e7eb',
+                  borderBottom: '1px solid var(--border-primary)',
                 }}
               >
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isToday ? '#2563eb' : '#6b7280' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isToday ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
                   {formatDayName(date)}
                 </div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {date.getDate()}
                 </div>
               </div>
@@ -268,7 +268,7 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
                     <div
                       style={{
                         fontSize: '0.625rem',
-                        color: '#9ca3af',
+                        color: 'var(--text-muted)',
                         marginBottom: '0.25rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -284,7 +284,7 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
                           style={{
                             fontSize: '0.75rem',
                             padding: '0.25rem 0.5rem',
-                            background: '#f3f4f6',
+                            background: 'var(--bg-tertiary)',
                             borderRadius: '0.25rem',
                             marginBottom: '0.25rem',
                             display: 'flex',
@@ -292,7 +292,7 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
                             alignItems: 'center',
                           }}
                         >
-                          <span style={{ color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {meal.recipeName}
                           </span>
                           <button
@@ -300,7 +300,7 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
                             style={{
                               background: 'none',
                               border: 'none',
-                              color: '#9ca3af',
+                              color: 'var(--text-muted)',
                               cursor: 'pointer',
                               padding: '0 0.25rem',
                               fontSize: '0.875rem',
@@ -317,9 +317,9 @@ export function MealPlanner({ onBack, onViewGroceryList }: MealPlannerProps) {
                           width: '100%',
                           padding: '0.25rem',
                           background: 'none',
-                          border: '1px dashed #d1d5db',
+                          border: '1px dashed var(--border-secondary)',
                           borderRadius: '0.25rem',
-                          color: '#9ca3af',
+                          color: 'var(--text-muted)',
                           fontSize: '0.625rem',
                           cursor: 'pointer',
                         }}
@@ -394,7 +394,7 @@ function RecipePickerModal({
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'var(--overlay-bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -403,14 +403,14 @@ function RecipePickerModal({
       }}
     >
       <Card style={{ maxWidth: '500px', width: '100%', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-primary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: '#111827' }}>
+            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
               Add {mealLabel}
             </h3>
             <button
               onClick={onClose}
-              style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#6b7280', cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--text-tertiary)', cursor: 'pointer' }}
             >
               ×
             </button>
@@ -424,9 +424,11 @@ function RecipePickerModal({
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--border-secondary)',
                 borderRadius: '0.375rem',
                 fontSize: '0.875rem',
+                background: 'var(--input-bg)',
+                color: 'var(--text-primary)',
               }}
             >
               <option value="">Select a cookbook...</option>
@@ -439,7 +441,7 @@ function RecipePickerModal({
 
         <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem' }}>
           {recipes.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-tertiary)' }}>
               {selectedCookbook ? 'No recipes in this cookbook' : 'Select a cookbook'}
             </div>
           ) : (
@@ -453,16 +455,16 @@ function RecipePickerModal({
                     alignItems: 'center',
                     gap: '0.75rem',
                     padding: '0.75rem',
-                    background: '#f9fafb',
-                    border: '1px solid #e5e7eb',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-primary)',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
                     textAlign: 'left',
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500, color: '#111827' }}>{recipe.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{recipe.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                       {recipe.total_time} • {recipe.yield}
                     </div>
                   </div>
@@ -496,7 +498,7 @@ function PlanSelectorModal({ plans, onSelect, onClose, onCreate }: PlanSelectorM
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'var(--overlay-bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -505,14 +507,14 @@ function PlanSelectorModal({ plans, onSelect, onClose, onCreate }: PlanSelectorM
       }}
     >
       <Card style={{ maxWidth: '400px', width: '100%', maxHeight: '70vh', overflow: 'hidden' }}>
-        <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-primary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: '#111827' }}>
+            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
               Meal Plans
             </h3>
             <button
               onClick={onClose}
-              style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#6b7280', cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--text-tertiary)', cursor: 'pointer' }}
             >
               ×
             </button>
@@ -529,12 +531,12 @@ function PlanSelectorModal({ plans, onSelect, onClose, onCreate }: PlanSelectorM
                 gap: '0.5rem',
                 width: '100%',
                 padding: '0.75rem',
-                background: '#eff6ff',
-                border: '1px dashed #2563eb',
+                background: 'var(--accent-light)',
+                border: '1px dashed var(--accent-primary)',
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
                 marginBottom: '0.5rem',
-                color: '#2563eb',
+                color: 'var(--accent-primary)',
                 fontWeight: 500,
               }}
             >
@@ -554,8 +556,8 @@ function PlanSelectorModal({ plans, onSelect, onClose, onCreate }: PlanSelectorM
                   justifyContent: 'space-between',
                   width: '100%',
                   padding: '0.75rem',
-                  background: '#f9fafb',
-                  border: '1px solid #e5e7eb',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-primary)',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
                   marginBottom: '0.5rem',
@@ -563,8 +565,8 @@ function PlanSelectorModal({ plans, onSelect, onClose, onCreate }: PlanSelectorM
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 500, color: '#111827' }}>{p.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                  <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{p.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                     {stats.totalMeals} meals planned
                   </div>
                 </div>
