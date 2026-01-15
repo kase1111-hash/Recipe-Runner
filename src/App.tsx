@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CookbookLibrary } from './components/cookbook/CookbookLibrary';
-import { RecipeList } from './components/recipe/RecipeList';
+import { RecipeList, RecipeScaler, MiseEnPlace } from './components/recipe';
 import { GroceryChecklist } from './components/recipe/GroceryChecklist';
 import { StepExecutor } from './components/step/StepExecutor';
 import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
@@ -10,8 +10,9 @@ import { initializeDatabase } from './db';
 import { seedSampleData } from './data/sampleCookbook';
 import type { Cookbook, Recipe, Ingredient } from './types';
 import type { ParsedRecipe } from './services/recipeParser';
+import type { ScaledRecipe } from './services/recipeScaling';
 
-type AppView = 'library' | 'cookbook' | 'import' | 'edit' | 'groceries' | 'cooking' | 'complete';
+type AppView = 'library' | 'cookbook' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete';
 
 function App() {
   const [initialized, setInitialized] = useState(false);
@@ -23,6 +24,7 @@ function App() {
   const [showChefOllama, setShowChefOllama] = useState(false);
   const [chefInitialMessage, setChefInitialMessage] = useState<string | undefined>();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showScaler, setShowScaler] = useState(false);
 
   // Initialize database and seed sample data
   useEffect(() => {
@@ -85,7 +87,29 @@ function App() {
 
   function handleGroceriesComplete(checked: string[]) {
     setCheckedIngredients(checked);
+    setView('miseenplace');
+  }
+
+  function handleMiseEnPlaceComplete() {
     setView('cooking');
+  }
+
+  function handleBackFromMiseEnPlace() {
+    setView('groceries');
+  }
+
+  function handleOpenScaler() {
+    setShowScaler(true);
+  }
+
+  function handleApplyScaling(scaledRecipe: ScaledRecipe) {
+    // Update the selected recipe with scaled values
+    setSelectedRecipe(scaledRecipe as Recipe);
+    setShowScaler(false);
+  }
+
+  function handleCancelScaling() {
+    setShowScaler(false);
   }
 
   function handleCookingComplete() {
@@ -163,6 +187,15 @@ function App() {
           onComplete={handleGroceriesComplete}
           onBack={handleBackToCookbook}
           onOpenChef={handleOpenChefForIngredient}
+          onOpenScaler={handleOpenScaler}
+        />
+      )}
+
+      {view === 'miseenplace' && selectedRecipe && (
+        <MiseEnPlace
+          recipe={selectedRecipe}
+          onComplete={handleMiseEnPlaceComplete}
+          onBack={handleBackFromMiseEnPlace}
         />
       )}
 
@@ -223,6 +256,15 @@ function App() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Recipe Scaler Modal */}
+      {showScaler && selectedRecipe && (
+        <RecipeScaler
+          recipe={selectedRecipe}
+          onApply={handleApplyScaling}
+          onCancel={handleCancelScaling}
+        />
       )}
 
       {/* Chef Ollama Overlay */}
