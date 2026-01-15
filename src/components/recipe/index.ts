@@ -3,3 +3,4 @@ export { RecipeScaler } from './RecipeScaler';
 export { MiseEnPlace } from './MiseEnPlace';
 export { CookCompletion } from './CookCompletion';
 export { RecipeDetail } from './RecipeDetail';
+export { DietaryWarnings } from './DietaryWarnings';

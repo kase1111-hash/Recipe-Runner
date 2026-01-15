@@ -234,3 +234,67 @@ export interface UserPreferences {
   dark_mode: boolean;
   auto_generate_visuals: boolean;
 }
+
+// ============================================
+// Dietary Preferences & Restrictions
+// ============================================
+
+export type DietaryRestriction =
+  | 'vegetarian'
+  | 'vegan'
+  | 'pescatarian'
+  | 'kosher'
+  | 'halal'
+  | 'gluten-free'
+  | 'dairy-free'
+  | 'nut-free'
+  | 'egg-free'
+  | 'soy-free'
+  | 'shellfish-free'
+  | 'low-sodium'
+  | 'low-sugar'
+  | 'low-carb'
+  | 'keto'
+  | 'paleo'
+  | 'whole30'
+  | 'fodmap'
+  | 'diabetic-friendly';
+
+export type HealthCondition =
+  | 'celiac'
+  | 'crohns'
+  | 'ibs'
+  | 'gerd'
+  | 'lactose-intolerant'
+  | 'diabetes-type1'
+  | 'diabetes-type2'
+  | 'heart-disease'
+  | 'high-cholesterol'
+  | 'high-blood-pressure'
+  | 'kidney-disease';
+
+export type WeightGoal = 'lose' | 'maintain' | 'gain';
+
+export interface DietaryPreferences {
+  enabled: boolean;
+  restrictions: DietaryRestriction[];
+  healthConditions: HealthCondition[];
+  allergies: string[];  // Custom allergies not in standard list
+  weightGoal: WeightGoal | null;
+  calorieTarget: number | null;  // Daily calorie target
+  proteinTarget: number | null;  // Grams per day
+  customNotes: string;  // Any other dietary notes
+}
+
+export interface AdaptedRecipe extends Recipe {
+  originalRecipe: Recipe;
+  adaptations: RecipeAdaptation[];
+  adaptedFor: DietaryPreferences;
+}
+
+export interface RecipeAdaptation {
+  type: 'ingredient_swap' | 'ingredient_remove' | 'instruction_change' | 'portion_adjust' | 'warning';
+  original: string;
+  adapted: string;
+  reason: string;
+}
