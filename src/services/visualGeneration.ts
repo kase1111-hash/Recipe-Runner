@@ -114,23 +114,100 @@ async function generateImage(prompt: string, settings: VisualSettings): Promise<
       return await generateWithStabilityAI(prompt, { type: 'stability', apiKey: settings.apiKey });
     case 'sdwebui':
       return await generateWithSDWebUI(prompt, settings.sdwebuiEndpoint || 'http://localhost:7860');
-    case 'local':
+    case 'placeholder':
     default:
-      return await generateWithOllama(prompt);
+      // Default to placeholder mode - works without any external services
+      return generatePlaceholderImage(prompt);
   }
 }
 
 /**
- * Ollama does NOT support image generation - this provides a helpful error
+ * Generate a placeholder image with styled visual description
+ * Works without any external services - perfect for demos and development
  */
-async function generateWithOllama(_prompt: string): Promise<string> {
-  throw new Error(
-    'Ollama cannot generate images (text-only). ' +
-    'Go to Settings > Visual Generation and select either:\n' +
-    '• SD WebUI (free, local) - requires Stable Diffusion WebUI\n' +
-    '• OpenAI (paid) - requires API key\n' +
-    '• Stability AI (paid) - requires API key'
-  );
+function generatePlaceholderImage(prompt: string): string {
+  // Extract a shorter description for display (first 100 chars)
+  const shortPrompt = prompt.length > 120 ? prompt.substring(0, 117) + '...' : prompt;
+
+  // Split prompt into lines for better display
+  const words = shortPrompt.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    if ((currentLine + ' ' + word).length > 35) {
+      if (currentLine) lines.push(currentLine.trim());
+      currentLine = word;
+    } else {
+      currentLine += ' ' + word;
+    }
+  }
+  if (currentLine.trim()) lines.push(currentLine.trim());
+
+  // Limit to 5 lines
+  const displayLines = lines.slice(0, 5);
+  if (lines.length > 5) {
+    displayLines[4] = displayLines[4].substring(0, 30) + '...';
+  }
+
+  // Create text elements for each line
+  const textElements = displayLines.map((line, i) =>
+    `<text x="256" y="${180 + i * 28}" text-anchor="middle" fill="#6b7280" font-size="16" font-family="system-ui, sans-serif">${escapeXml(line)}</text>`
+  ).join('\n    ');
+
+  // Generate a pleasant gradient based on prompt hash
+  const hash = simpleHash(prompt);
+  const hue1 = hash % 360;
+  const hue2 = (hash + 40) % 360;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(${hue1}, 25%, 95%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(${hue2}, 30%, 90%);stop-opacity:1" />
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="rgba(0,0,0,0.03)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#grid)"/>
+  <circle cx="256" cy="100" r="40" fill="hsl(${hue1}, 40%, 80%)" opacity="0.7"/>
+  <text x="256" y="108" text-anchor="middle" fill="hsl(${hue1}, 50%, 40%)" font-size="32">👁️</text>
+  <rect x="40" y="140" width="432" height="${displayLines.length * 28 + 40}" rx="12" fill="white" opacity="0.7"/>
+  <text x="256" y="165" text-anchor="middle" fill="#374151" font-size="12" font-weight="600" font-family="system-ui, sans-serif">VISUAL REFERENCE</text>
+    ${textElements}
+  <text x="256" y="480" text-anchor="middle" fill="#9ca3af" font-size="11" font-family="system-ui, sans-serif">Configure AI image generation in Settings</text>
+</svg>`;
+
+  // Convert SVG to base64 data URI
+  const base64 = btoa(unescape(encodeURIComponent(svg)));
+  return `data:image/svg+xml;base64,${base64}`;
+}
+
+/**
+ * Simple hash function for generating consistent colors from prompts
+ */
+function simpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * Escape special XML characters
+ */
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
 
 // ============================================
@@ -507,7 +584,7 @@ export interface VisualSettings {
   autoGenerate: boolean;
   prefetchEnabled: boolean;
   prefetchCount: number;
-  apiProvider: 'local' | 'sdwebui' | 'openai' | 'stability';
+  apiProvider: 'placeholder' | 'sdwebui' | 'openai' | 'stability';
   apiKey?: string;
   sdwebuiEndpoint?: string;
 }
@@ -520,7 +597,7 @@ const defaultVisualSettings: VisualSettings = {
   autoGenerate: true,
   prefetchEnabled: true,
   prefetchCount: 2,
-  apiProvider: 'sdwebui',
+  apiProvider: 'placeholder',  // Default to placeholder - works without any external services
   sdwebuiEndpoint: 'http://localhost:7860',
 };
 
@@ -529,9 +606,9 @@ export function getVisualSettings(): VisualSettings {
     const stored = localStorage.getItem(VISUAL_SETTINGS_KEY);
     if (stored) {
       const parsed = { ...defaultVisualSettings, ...JSON.parse(stored) };
-      // Auto-migrate from 'local' (doesn't work) to 'sdwebui' (works)
+      // Auto-migrate from old providers that don't work out of the box to 'placeholder'
       if (parsed.apiProvider === 'local') {
-        parsed.apiProvider = 'sdwebui';
+        parsed.apiProvider = 'placeholder';
         localStorage.setItem(VISUAL_SETTINGS_KEY, JSON.stringify(parsed));
       }
       return parsed;

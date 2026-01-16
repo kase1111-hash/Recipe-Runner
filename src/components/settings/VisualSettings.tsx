@@ -244,7 +244,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                 </label>
                 <select
                   value={settings.apiProvider}
-                  onChange={(e) => handleChange('apiProvider', e.target.value as 'local' | 'sdwebui' | 'openai' | 'stability')}
+                  onChange={(e) => handleChange('apiProvider', e.target.value as 'placeholder' | 'sdwebui' | 'openai' | 'stability')}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -255,6 +255,7 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
                     color: 'var(--text-primary)',
                   }}
                 >
+                  <option value="placeholder">Placeholder (No Setup Required)</option>
                   <option value="sdwebui">Stable Diffusion WebUI (Local, Free)</option>
                   <option value="openai">OpenAI DALL-E 3 (Paid)</option>
                   <option value="stability">Stability AI SDXL (Paid)</option>
@@ -262,6 +263,9 @@ export function VisualSettings({ onClose }: VisualSettingsProps) {
 
                 {/* Provider info */}
                 <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                  {settings.apiProvider === 'placeholder' && (
+                    <>Shows styled visual descriptions. No external services needed - works out of the box!</>
+                  )}
                   {settings.apiProvider === 'sdwebui' && (
                     <>Free local generation. Requires AUTOMATIC1111 WebUI running with --api flag.</>
                   )}
