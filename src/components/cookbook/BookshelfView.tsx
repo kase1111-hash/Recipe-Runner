@@ -6,7 +6,7 @@ import { Card, Button } from '../common';
 import {
   getAllBookshelves,
   getCookbooksByBookshelf,
-  getUnshelvdCookbooks,
+  getUnshelvedCookbooks,
   createBookshelf,
   updateBookshelf,
   deleteBookshelf,
@@ -62,7 +62,7 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
       }
 
       setShelves(shelvesWithCookbooks);
-      setUnshelvedCookbooks(await getUnshelvdCookbooks());
+      setUnshelvedCookbooks(await getUnshelvedCookbooks());
     } catch (error) {
       console.error('Failed to load bookshelves:', error);
     } finally {

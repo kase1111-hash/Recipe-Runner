@@ -62,7 +62,7 @@ function buildContext(
   const preferences = getPreferences();
 
   // Calculate times cooked from history
-  const timesCoooked = recipe.cook_history.length;
+  const timesCooked = recipe.cook_history.length;
   const lastCooked = recipe.cook_history.length > 0
     ? recipe.cook_history[recipe.cook_history.length - 1].date
     : undefined;
@@ -94,7 +94,7 @@ function buildContext(
       safe_temp: recipe.safe_temp,
     },
     user_context: {
-      times_cooked: timesCoooked,
+      times_cooked: timesCooked,
       last_cooked: lastCooked,
       previous_adjustments: previousAdjustments,
       skill_level: preferences.skill_level,

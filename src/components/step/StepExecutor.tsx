@@ -25,6 +25,16 @@ export function StepExecutor({
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === recipe.steps.length - 1;
 
+  // Guard against empty steps array
+  if (!currentStep) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <p>No steps available for this recipe.</p>
+        <Button onClick={onBack}>← Go Back</Button>
+      </div>
+    );
+  }
+
   function goToNextStep() {
     if (isLastStep) {
       onComplete();
