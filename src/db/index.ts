@@ -83,7 +83,7 @@ export async function getCookbooksByBookshelf(bookshelfId: string): Promise<Cook
   return await db.cookbooks.where('bookshelf_id').equals(bookshelfId).toArray();
 }
 
-export async function getUnshelvdCookbooks(): Promise<Cookbook[]> {
+export async function getUnshelvedCookbooks(): Promise<Cookbook[]> {
   return await db.cookbooks.filter((cb) => !cb.bookshelf_id).toArray();
 }
 
