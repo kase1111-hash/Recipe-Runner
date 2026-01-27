@@ -333,6 +333,49 @@ export async function deleteCookingSession(recipeId: string): Promise<void> {
 // Image Cache Operations
 // ============================================
 
+/**
+ * Convert base64 data URI to Blob for efficient storage
+ * SVG data URIs are kept as-is since they're already efficient text
+ */
+function dataUriToBlob(dataUri: string): Blob | string {
+  // Keep SVG data URIs as strings (they're efficient text)
+  if (dataUri.startsWith('data:image/svg+xml')) {
+    return dataUri;
+  }
+
+  // Convert base64 PNG/JPEG to Blob for efficient storage
+  try {
+    const [header, base64Data] = dataUri.split(',');
+    const mimeMatch = header.match(/data:([^;]+)/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+
+    const byteString = atob(base64Data);
+    const arrayBuffer = new ArrayBuffer(byteString.length);
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    for (let i = 0; i < byteString.length; i++) {
+      uint8Array[i] = byteString.charCodeAt(i);
+    }
+
+    return new Blob([arrayBuffer], { type: mimeType });
+  } catch {
+    // If conversion fails, store as string
+    return dataUri;
+  }
+}
+
+/**
+ * Convert Blob back to data URI for display
+ */
+async function blobToDataUri(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 export async function cacheStepImage(
   recipeId: string,
   stepIndex: number,
@@ -340,11 +383,13 @@ export async function cacheStepImage(
   version: number = 1
 ): Promise<void> {
   const id = `${recipeId}_${stepIndex}_v${version}`;
+  const storedData = dataUriToBlob(imageData);
+
   await db.imageCache.put({
     id,
     recipe_id: recipeId,
     step_index: stepIndex,
-    image_data: imageData,
+    image_data: storedData as string, // Type assertion for Dexie compatibility
     version,
     created_at: new Date().toISOString(),
   });
@@ -358,7 +403,14 @@ export async function getCachedStepImage(
     .where('[recipe_id+step_index]')
     .equals([recipeId, stepIndex])
     .first();
-  return cached?.image_data ?? null;
+
+  if (!cached) return null;
+
+  // Handle both Blob and string storage
+  if (cached.image_data instanceof Blob) {
+    return await blobToDataUri(cached.image_data);
+  }
+  return cached.image_data;
 }
 
 export async function clearImageCache(recipeId?: string): Promise<void> {
@@ -377,9 +429,20 @@ export async function getStepImageVersions(
     .where('[recipe_id+step_index]')
     .equals([recipeId, stepIndex])
     .toArray();
-  return versions
-    .map(v => ({ version: v.version, image_data: v.image_data, created_at: v.created_at }))
-    .sort((a, b) => b.version - a.version);
+
+  const results: Array<{ version: number; image_data: string; created_at: string }> = [];
+
+  for (const v of versions) {
+    let imageData: string;
+    if (v.image_data instanceof Blob) {
+      imageData = await blobToDataUri(v.image_data);
+    } else {
+      imageData = v.image_data;
+    }
+    results.push({ version: v.version, image_data: imageData, created_at: v.created_at });
+  }
+
+  return results.sort((a, b) => b.version - a.version);
 }
 
 export async function getCachedStepImageByVersion(
@@ -389,14 +452,23 @@ export async function getCachedStepImageByVersion(
 ): Promise<string | null> {
   const id = `${recipeId}_${stepIndex}_v${version}`;
   const cached = await db.imageCache.get(id);
-  return cached?.image_data ?? null;
+
+  if (!cached) return null;
+
+  if (cached.image_data instanceof Blob) {
+    return await blobToDataUri(cached.image_data);
+  }
+  return cached.image_data;
 }
 
 export async function getNextImageVersion(
   recipeId: string,
   stepIndex: number
 ): Promise<number> {
-  const versions = await getStepImageVersions(recipeId, stepIndex);
+  const versions = await db.imageCache
+    .where('[recipe_id+step_index]')
+    .equals([recipeId, stepIndex])
+    .toArray();
   if (versions.length === 0) return 1;
   return Math.max(...versions.map(v => v.version)) + 1;
 }
@@ -412,7 +484,12 @@ export async function getImageCacheStats(): Promise<{
 
   for (const item of all) {
     byRecipe[item.recipe_id] = (byRecipe[item.recipe_id] || 0) + 1;
-    totalSize += item.image_data.length;
+    // Calculate size for both Blob and string storage
+    if (item.image_data instanceof Blob) {
+      totalSize += item.image_data.size;
+    } else {
+      totalSize += item.image_data.length;
+    }
   }
 
   return {
