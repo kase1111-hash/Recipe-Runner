@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ErrorBoundary } from './ErrorBoundary';
 
@@ -67,23 +67,28 @@ describe('ErrorBoundary', () => {
   });
 
   it('resets error state when Try Again is clicked', () => {
-    const { rerender } = render(
+    // Use a ref-based approach to control when the error is thrown
+    let shouldThrow = true;
+    const TestComponent = () => {
+      if (shouldThrow) {
+        throw new Error('Test error message');
+      }
+      return <div>No error</div>;
+    };
+
+    render(
       <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
+        <TestComponent />
       </ErrorBoundary>
     );
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
-    // Click Try Again
-    fireEvent.click(screen.getByText('Try Again'));
+    // Fix the component before resetting
+    shouldThrow = false;
 
-    // Rerender with non-throwing component
-    rerender(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={false} />
-      </ErrorBoundary>
-    );
+    // Click Try Again - this resets the boundary and re-renders children
+    fireEvent.click(screen.getByText('Try Again'));
 
     expect(screen.getByText('No error')).toBeInTheDocument();
   });

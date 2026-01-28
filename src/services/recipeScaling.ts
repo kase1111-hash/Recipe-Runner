@@ -2,6 +2,7 @@
 // Phase 4 Smart Feature - Automatic ingredient recalculation
 
 import type { Recipe, Ingredient } from '../types';
+import { parseAmount as parseAmountUtil, formatAmount } from './utils';
 
 // ============================================
 // Types
@@ -92,77 +93,16 @@ export function parseYield(yieldStr: string): ParsedYield {
 // Amount Parsing & Formatting
 // ============================================
 
-interface ParsedAmount {
-  value: number;
-  unit: string;
-  original: string;
-}
-
-function parseAmount(amount: string): ParsedAmount {
+// Use shared utility with unicode fraction support
+function parseAmount(amount: string): { value: number; unit: string; original: string } {
   const original = amount;
-
-  // Handle fractions like "1/2", "3/4"
-  let value = 0;
-  const parts = amount.trim().split(/\s+/);
-
-  for (const part of parts) {
-    if (part.includes('/')) {
-      const [num, denom] = part.split('/').map(Number);
-      if (denom) value += num / denom;
-    } else {
-      const num = parseFloat(part);
-      if (!isNaN(num)) value += num;
-    }
-  }
+  const value = parseAmountUtil(amount, 0);
 
   // Extract unit if present
   const unitMatch = amount.match(/[a-zA-Z]+$/);
   const unit = unitMatch ? unitMatch[0] : '';
 
-  return { value: value || 0, unit, original };
-}
-
-function formatAmount(value: number): string {
-  // Convert to nice fractions for common values
-  const fractions: Record<number, string> = {
-    0.125: '1/8',
-    0.25: '1/4',
-    0.333: '1/3',
-    0.375: '3/8',
-    0.5: '1/2',
-    0.625: '5/8',
-    0.666: '2/3',
-    0.75: '3/4',
-    0.875: '7/8',
-  };
-
-  if (value === 0) return '0';
-
-  const whole = Math.floor(value);
-  const decimal = value - whole;
-
-  // Find closest fraction
-  let closestFraction = '';
-  let minDiff = 0.05; // Tolerance
-
-  for (const [key, frac] of Object.entries(fractions)) {
-    const diff = Math.abs(decimal - parseFloat(key));
-    if (diff < minDiff) {
-      minDiff = diff;
-      closestFraction = frac;
-    }
-  }
-
-  if (whole === 0 && closestFraction) {
-    return closestFraction;
-  } else if (closestFraction) {
-    return `${whole} ${closestFraction}`;
-  } else if (Number.isInteger(value)) {
-    return value.toString();
-  } else {
-    // Round to reasonable precision
-    return value.toFixed(value < 1 ? 2 : 1).replace(/\.?0+$/, '');
-  }
+  return { value, unit, original };
 }
 
 // ============================================

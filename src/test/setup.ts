@@ -1,4 +1,9 @@
+import { vi, beforeEach } from 'vitest';
 import '@testing-library/dom';
+import '@testing-library/jest-dom/vitest';
+
+// Mock IndexedDB for Dexie
+import 'fake-indexeddb/auto';
 
 // Mock localStorage
 const localStorageMock = {
@@ -10,9 +15,6 @@ const localStorageMock = {
   key: vi.fn(),
 };
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
-
-// Mock IndexedDB for Dexie
-import 'fake-indexeddb/auto';
 
 // Reset mocks between tests
 beforeEach(() => {

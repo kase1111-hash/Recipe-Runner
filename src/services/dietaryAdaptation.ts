@@ -11,6 +11,7 @@ import type {
   AdaptedRecipe,
 } from '../types';
 import { getPreferences } from '../db';
+import { sanitizeAiResponse } from './utils';
 
 // ============================================
 // Dietary Preferences Storage
@@ -263,7 +264,9 @@ export async function adaptRecipe(recipe: Recipe): Promise<AdaptedRecipe> {
   }
 
   const prompt = buildAdaptationPrompt(recipe, prefs);
-  const responseText = await sendToOllama(prompt);
+  const rawResponseText = await sendToOllama(prompt);
+  // Sanitize AI response to prevent XSS
+  const responseText = sanitizeAiResponse(rawResponseText);
   const response = parseAdaptationResponse(responseText);
 
   if (!response.canAdapt) {
