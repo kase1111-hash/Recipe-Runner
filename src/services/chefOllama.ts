@@ -10,6 +10,7 @@ import type {
   Ingredient,
 } from '../types';
 import { getPreferences } from '../db';
+import { sanitizeAiResponse } from './utils';
 
 // ============================================
 // System Prompts
@@ -194,7 +195,10 @@ export async function chatWithChef(
   ];
 
   try {
-    const response = await sendToOllama(messages, config);
+    const rawResponse = await sendToOllama(messages, config);
+
+    // Sanitize AI response to prevent XSS
+    const response = sanitizeAiResponse(rawResponse);
 
     // Parse response for suggested actions
     const suggestedActions = parseActionsFromResponse(response);

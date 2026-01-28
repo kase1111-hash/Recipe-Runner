@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useReducer, useEffect, useCallback } from 'react';
 import { ThemeProvider, KeyboardShortcutsProvider } from './contexts';
 import { CookbookLibrary } from './components/cookbook/CookbookLibrary';
 import { BookshelfView } from './components/cookbook/BookshelfView';
@@ -16,32 +16,350 @@ import type { Cookbook, Recipe, Ingredient } from './types';
 import type { ParsedRecipe } from './services/recipeParser';
 import type { ScaledRecipe } from './services/recipeScaling';
 
-type AppView = 'library' | 'bookshelf' | 'cookbook' | 'detail' | 'import' | 'edit' | 'groceries' | 'miseenplace' | 'cooking' | 'complete' | 'mealplanner' | 'mealplangroceries' | 'inventory';
+// ============================================
+// State Types
+// ============================================
+
+type AppView =
+  | 'library'
+  | 'bookshelf'
+  | 'cookbook'
+  | 'detail'
+  | 'import'
+  | 'edit'
+  | 'groceries'
+  | 'miseenplace'
+  | 'cooking'
+  | 'complete'
+  | 'mealplanner'
+  | 'mealplangroceries'
+  | 'inventory';
+
+interface AppState {
+  initialized: boolean;
+  view: AppView;
+  selectedCookbook: Cookbook | null;
+  selectedRecipe: Recipe | null;
+  parsedRecipe: ParsedRecipe | null;
+  checkedIngredients: string[];
+  showChefOllama: boolean;
+  chefInitialMessage: string | undefined;
+  refreshKey: number;
+  showScaler: boolean;
+  selectedMealPlanId: string | null;
+}
+
+// ============================================
+// Action Types
+// ============================================
+
+type AppAction =
+  | { type: 'INITIALIZE' }
+  | { type: 'NAVIGATE'; view: AppView }
+  | { type: 'SELECT_COOKBOOK'; cookbook: Cookbook }
+  | { type: 'SELECT_RECIPE'; recipe: Recipe }
+  | { type: 'SET_PARSED_RECIPE'; parsedRecipe: ParsedRecipe | null }
+  | { type: 'SAVE_RECIPE' }
+  | { type: 'SET_CHECKED_INGREDIENTS'; ingredients: string[] }
+  | { type: 'OPEN_CHEF'; initialMessage?: string }
+  | { type: 'CLOSE_CHEF' }
+  | { type: 'OPEN_SCALER' }
+  | { type: 'APPLY_SCALING'; recipe: Recipe }
+  | { type: 'CLOSE_SCALER' }
+  | { type: 'SELECT_MEAL_PLAN'; planId: string }
+  | { type: 'BACK_TO_LIBRARY' }
+  | { type: 'BACK_TO_COOKBOOK' }
+  | { type: 'UPDATE_RECIPE'; recipe: Recipe };
+
+// ============================================
+// Initial State
+// ============================================
+
+const initialState: AppState = {
+  initialized: false,
+  view: 'library',
+  selectedCookbook: null,
+  selectedRecipe: null,
+  parsedRecipe: null,
+  checkedIngredients: [],
+  showChefOllama: false,
+  chefInitialMessage: undefined,
+  refreshKey: 0,
+  showScaler: false,
+  selectedMealPlanId: null,
+};
+
+// ============================================
+// Reducer
+// ============================================
+
+function appReducer(state: AppState, action: AppAction): AppState {
+  switch (action.type) {
+    case 'INITIALIZE':
+      return { ...state, initialized: true };
+
+    case 'NAVIGATE':
+      return { ...state, view: action.view };
+
+    case 'SELECT_COOKBOOK':
+      return { ...state, selectedCookbook: action.cookbook, view: 'cookbook' };
+
+    case 'SELECT_RECIPE':
+      return { ...state, selectedRecipe: action.recipe, view: 'detail' };
+
+    case 'SET_PARSED_RECIPE':
+      return {
+        ...state,
+        parsedRecipe: action.parsedRecipe,
+        view: action.parsedRecipe ? 'edit' : state.view,
+      };
+
+    case 'SAVE_RECIPE':
+      return {
+        ...state,
+        parsedRecipe: null,
+        refreshKey: state.refreshKey + 1,
+        view: 'cookbook',
+      };
+
+    case 'SET_CHECKED_INGREDIENTS':
+      return {
+        ...state,
+        checkedIngredients: action.ingredients,
+        view: 'miseenplace',
+      };
+
+    case 'OPEN_CHEF':
+      return {
+        ...state,
+        showChefOllama: true,
+        chefInitialMessage: action.initialMessage,
+      };
+
+    case 'CLOSE_CHEF':
+      return {
+        ...state,
+        showChefOllama: false,
+        chefInitialMessage: undefined,
+      };
+
+    case 'OPEN_SCALER':
+      return { ...state, showScaler: true };
+
+    case 'APPLY_SCALING':
+      return {
+        ...state,
+        selectedRecipe: action.recipe,
+        showScaler: false,
+      };
+
+    case 'CLOSE_SCALER':
+      return { ...state, showScaler: false };
+
+    case 'SELECT_MEAL_PLAN':
+      return {
+        ...state,
+        selectedMealPlanId: action.planId,
+        view: 'mealplangroceries',
+      };
+
+    case 'BACK_TO_LIBRARY':
+      return {
+        ...state,
+        selectedCookbook: null,
+        selectedRecipe: null,
+        checkedIngredients: [],
+        view: 'library',
+      };
+
+    case 'BACK_TO_COOKBOOK':
+      return {
+        ...state,
+        selectedRecipe: null,
+        checkedIngredients: [],
+        view: 'cookbook',
+      };
+
+    case 'UPDATE_RECIPE':
+      return { ...state, selectedRecipe: action.recipe };
+
+    default:
+      return state;
+  }
+}
+
+// ============================================
+// App Component
+// ============================================
 
 function App() {
-  const [initialized, setInitialized] = useState(false);
-  const [view, setView] = useState<AppView>('library');
-  const [selectedCookbook, setSelectedCookbook] = useState<Cookbook | null>(null);
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
-  const [parsedRecipe, setParsedRecipe] = useState<ParsedRecipe | null>(null);
-  const [checkedIngredients, setCheckedIngredients] = useState<string[]>([]);
-  const [showChefOllama, setShowChefOllama] = useState(false);
-  const [chefInitialMessage, setChefInitialMessage] = useState<string | undefined>();
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [showScaler, setShowScaler] = useState(false);
-  const [selectedMealPlanId, setSelectedMealPlanId] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(appReducer, initialState);
 
   // Initialize database and seed sample data
   useEffect(() => {
     async function init() {
       await initializeDatabase();
       await seedSampleData();
-      setInitialized(true);
+      dispatch({ type: 'INITIALIZE' });
     }
     init();
   }, []);
 
-  if (!initialized) {
+  // ============================================
+  // Event Handlers
+  // ============================================
+
+  const handleSelectCookbook = useCallback((cookbook: Cookbook) => {
+    dispatch({ type: 'SELECT_COOKBOOK', cookbook });
+  }, []);
+
+  const handleSelectRecipe = useCallback((recipe: Recipe) => {
+    dispatch({ type: 'SELECT_RECIPE', recipe });
+  }, []);
+
+  const handleStartCooking = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'groceries' });
+  }, []);
+
+  const handleStartImport = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'import' });
+  }, []);
+
+  const handleImportComplete = useCallback((parsed: ParsedRecipe) => {
+    dispatch({ type: 'SET_PARSED_RECIPE', parsedRecipe: parsed });
+  }, []);
+
+  const handleSaveRecipe = useCallback(() => {
+    dispatch({ type: 'SAVE_RECIPE' });
+  }, []);
+
+  const handleCancelImport = useCallback(() => {
+    dispatch({ type: 'SET_PARSED_RECIPE', parsedRecipe: null });
+    dispatch({ type: 'NAVIGATE', view: 'cookbook' });
+  }, []);
+
+  const handleGroceriesComplete = useCallback((checked: string[]) => {
+    dispatch({ type: 'SET_CHECKED_INGREDIENTS', ingredients: checked });
+  }, []);
+
+  const handleMiseEnPlaceComplete = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'cooking' });
+  }, []);
+
+  const handleOpenScaler = useCallback(() => {
+    dispatch({ type: 'OPEN_SCALER' });
+  }, []);
+
+  const handleApplyScaling = useCallback((scaledRecipe: ScaledRecipe) => {
+    dispatch({ type: 'APPLY_SCALING', recipe: scaledRecipe as Recipe });
+  }, []);
+
+  const handleCancelScaling = useCallback(() => {
+    dispatch({ type: 'CLOSE_SCALER' });
+  }, []);
+
+  const handleCookingComplete = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'complete' });
+  }, []);
+
+  const handleCompletionFinished = useCallback(async () => {
+    if (state.selectedRecipe) {
+      const refreshed = await getRecipe(state.selectedRecipe.id);
+      if (refreshed) {
+        dispatch({ type: 'UPDATE_RECIPE', recipe: refreshed });
+      }
+    }
+    dispatch({ type: 'BACK_TO_LIBRARY' });
+  }, [state.selectedRecipe]);
+
+  const handleCookAgain = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'groceries' });
+  }, []);
+
+  const handleOpenChefForIngredient = useCallback((ingredient: Ingredient) => {
+    dispatch({
+      type: 'OPEN_CHEF',
+      initialMessage: `I don't have ${ingredient.item}. What can I substitute?`,
+    });
+  }, []);
+
+  const handleOpenChef = useCallback(() => {
+    dispatch({ type: 'OPEN_CHEF' });
+  }, []);
+
+  const handleCloseChef = useCallback(() => {
+    dispatch({ type: 'CLOSE_CHEF' });
+  }, []);
+
+  const handleBackToLibrary = useCallback(() => {
+    dispatch({ type: 'BACK_TO_LIBRARY' });
+  }, []);
+
+  const handleBackToCookbook = useCallback(() => {
+    dispatch({ type: 'BACK_TO_COOKBOOK' });
+  }, []);
+
+  const handleBackToDetail = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'detail' });
+  }, []);
+
+  const handleBackToGroceries = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'groceries' });
+  }, []);
+
+  const handleBackFromMiseEnPlace = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'groceries' });
+  }, []);
+
+  const handleOpenMealPlanner = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'mealplanner' });
+  }, []);
+
+  const handleViewMealPlanGroceries = useCallback((planId: string) => {
+    dispatch({ type: 'SELECT_MEAL_PLAN', planId });
+  }, []);
+
+  const handleBackFromMealPlanner = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'library' });
+  }, []);
+
+  const handleBackFromMealPlanGroceries = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'mealplanner' });
+  }, []);
+
+  const handleOpenInventory = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'inventory' });
+  }, []);
+
+  const handleBackFromInventory = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'library' });
+  }, []);
+
+  const handleOpenBookshelf = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'bookshelf' });
+  }, []);
+
+  const handleBackFromBookshelf = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'library' });
+  }, []);
+
+  const handleSelectCookbookFromBookshelf = useCallback((cookbook: Cookbook) => {
+    dispatch({ type: 'SELECT_COOKBOOK', cookbook });
+  }, []);
+
+  const handleSelectSideDish = useCallback(async (sideDishRecipe: Recipe) => {
+    const cookbook = await getCookbook(sideDishRecipe.cookbook_id);
+    if (cookbook) {
+      dispatch({ type: 'SELECT_COOKBOOK', cookbook });
+    }
+    dispatch({ type: 'SELECT_RECIPE', recipe: sideDishRecipe });
+  }, []);
+
+  // ============================================
+  // Loading State
+  // ============================================
+
+  if (!state.initialized) {
     return (
       <ThemeProvider>
         <div
@@ -62,305 +380,143 @@ function App() {
     );
   }
 
-  function handleSelectCookbook(cookbook: Cookbook) {
-    setSelectedCookbook(cookbook);
-    setView('cookbook');
-  }
-
-  function handleSelectRecipe(recipe: Recipe) {
-    setSelectedRecipe(recipe);
-    setView('detail');
-  }
-
-  function handleStartCookingFromDetail() {
-    setView('groceries');
-  }
-
-  function handleBackToDetail() {
-    setView('detail');
-  }
-
-  function handleStartImport() {
-    setView('import');
-  }
-
-  function handleImportComplete(parsed: ParsedRecipe) {
-    setParsedRecipe(parsed);
-    setView('edit');
-  }
-
-  function handleSaveRecipe() {
-    setParsedRecipe(null);
-    setRefreshKey(prev => prev + 1); // Trigger refresh of recipe list
-    setView('cookbook');
-  }
-
-  function handleCancelImport() {
-    setParsedRecipe(null);
-    setView('cookbook');
-  }
-
-  function handleGroceriesComplete(checked: string[]) {
-    setCheckedIngredients(checked);
-    setView('miseenplace');
-  }
-
-  function handleMiseEnPlaceComplete() {
-    setView('cooking');
-  }
-
-  function handleBackFromMiseEnPlace() {
-    setView('groceries');
-  }
-
-  function handleOpenScaler() {
-    setShowScaler(true);
-  }
-
-  function handleApplyScaling(scaledRecipe: ScaledRecipe) {
-    // Update the selected recipe with scaled values
-    setSelectedRecipe(scaledRecipe as Recipe);
-    setShowScaler(false);
-  }
-
-  function handleCancelScaling() {
-    setShowScaler(false);
-  }
-
-  function handleCookingComplete() {
-    setView('complete');
-  }
-
-  async function handleCompletionFinished() {
-    // Refresh the recipe to get updated cook history
-    if (selectedRecipe) {
-      const refreshed = await getRecipe(selectedRecipe.id);
-      if (refreshed) {
-        setSelectedRecipe(refreshed);
-      }
-    }
-    setCheckedIngredients([]);
-    handleBackToLibrary();
-  }
-
-  function handleCookAgain() {
-    setView('groceries');
-  }
-
-  function handleOpenChefForIngredient(ingredient: Ingredient) {
-    setChefInitialMessage(`I don't have ${ingredient.item}. What can I substitute?`);
-    setShowChefOllama(true);
-  }
-
-  function handleOpenChef() {
-    setChefInitialMessage(undefined);
-    setShowChefOllama(true);
-  }
-
-  function handleCloseChef() {
-    setShowChefOllama(false);
-    setChefInitialMessage(undefined);
-  }
-
-  function handleBackToLibrary() {
-    setSelectedCookbook(null);
-    setSelectedRecipe(null);
-    setCheckedIngredients([]);
-    setView('library');
-  }
-
-  function handleBackToCookbook() {
-    setSelectedRecipe(null);
-    setCheckedIngredients([]);
-    setView('cookbook');
-  }
-
-  function handleBackToGroceries() {
-    setView('groceries');
-  }
-
-  function handleOpenMealPlanner() {
-    setView('mealplanner');
-  }
-
-  function handleViewMealPlanGroceries(planId: string) {
-    setSelectedMealPlanId(planId);
-    setView('mealplangroceries');
-  }
-
-  function handleBackFromMealPlanner() {
-    setView('library');
-  }
-
-  function handleBackFromMealPlanGroceries() {
-    setView('mealplanner');
-  }
-
-  function handleOpenInventory() {
-    setView('inventory');
-  }
-
-  function handleBackFromInventory() {
-    setView('library');
-  }
-
-  function handleOpenBookshelf() {
-    setView('bookshelf');
-  }
-
-  function handleBackFromBookshelf() {
-    setView('library');
-  }
-
-  function handleSelectCookbookFromBookshelf(cookbook: Cookbook) {
-    setSelectedCookbook(cookbook);
-    setView('cookbook');
-  }
-
-  // Handler for selecting a side dish suggestion
-  async function handleSelectSideDish(sideDishRecipe: Recipe) {
-    // Load the cookbook for the side dish
-    const cookbook = await getCookbook(sideDishRecipe.cookbook_id);
-    if (cookbook) {
-      setSelectedCookbook(cookbook);
-    }
-    setSelectedRecipe(sideDishRecipe);
-    setView('detail');
-  }
+  // ============================================
+  // Render
+  // ============================================
 
   return (
     <ThemeProvider>
       <KeyboardShortcutsProvider>
         <div style={{ minHeight: '100vh', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-        {view === 'library' && (
-        <CookbookLibrary
-          onSelectCookbook={handleSelectCookbook}
-          onOpenMealPlanner={handleOpenMealPlanner}
-          onOpenInventory={handleOpenInventory}
-          onOpenBookshelf={handleOpenBookshelf}
-        />
-      )}
+          {state.view === 'library' && (
+            <CookbookLibrary
+              onSelectCookbook={handleSelectCookbook}
+              onOpenMealPlanner={handleOpenMealPlanner}
+              onOpenInventory={handleOpenInventory}
+              onOpenBookshelf={handleOpenBookshelf}
+            />
+          )}
 
-      {view === 'bookshelf' && (
-        <BookshelfView
-          onSelectCookbook={handleSelectCookbookFromBookshelf}
-          onBack={handleBackFromBookshelf}
-        />
-      )}
+          {state.view === 'bookshelf' && (
+            <BookshelfView
+              onSelectCookbook={handleSelectCookbookFromBookshelf}
+              onBack={handleBackFromBookshelf}
+            />
+          )}
 
-      {view === 'cookbook' && selectedCookbook && (
-        <RecipeList
-          key={refreshKey}
-          cookbook={selectedCookbook}
-          onSelectRecipe={handleSelectRecipe}
-          onAddRecipe={handleStartImport}
-          onBack={handleBackToLibrary}
-        />
-      )}
+          {state.view === 'cookbook' && state.selectedCookbook && (
+            <RecipeList
+              key={state.refreshKey}
+              cookbook={state.selectedCookbook}
+              onSelectRecipe={handleSelectRecipe}
+              onAddRecipe={handleStartImport}
+              onBack={handleBackToLibrary}
+            />
+          )}
 
-      {view === 'detail' && selectedRecipe && (
-        <RecipeDetail
-          recipe={selectedRecipe}
-          onStartCooking={handleStartCookingFromDetail}
-          onBack={handleBackToCookbook}
-          onSelectSideDish={handleSelectSideDish}
-        />
-      )}
+          {state.view === 'detail' && state.selectedRecipe && (
+            <RecipeDetail
+              recipe={state.selectedRecipe}
+              onStartCooking={handleStartCooking}
+              onBack={handleBackToCookbook}
+              onSelectSideDish={handleSelectSideDish}
+            />
+          )}
 
-      {view === 'import' && selectedCookbook && (
-        <RecipeImport
-          cookbook={selectedCookbook}
-          onImportComplete={handleImportComplete}
-          onCancel={handleCancelImport}
-        />
-      )}
+          {state.view === 'import' && state.selectedCookbook && (
+            <RecipeImport
+              cookbook={state.selectedCookbook}
+              onImportComplete={handleImportComplete}
+              onCancel={handleCancelImport}
+            />
+          )}
 
-      {view === 'edit' && selectedCookbook && parsedRecipe && (
-        <RecipeEditor
-          parsedRecipe={parsedRecipe}
-          cookbook={selectedCookbook}
-          onSave={handleSaveRecipe}
-          onCancel={handleCancelImport}
-        />
-      )}
+          {state.view === 'edit' && state.selectedCookbook && state.parsedRecipe && (
+            <RecipeEditor
+              parsedRecipe={state.parsedRecipe}
+              cookbook={state.selectedCookbook}
+              onSave={handleSaveRecipe}
+              onCancel={handleCancelImport}
+            />
+          )}
 
-      {view === 'groceries' && selectedRecipe && (
-        <GroceryChecklist
-          recipe={selectedRecipe}
-          onComplete={handleGroceriesComplete}
-          onBack={handleBackToDetail}
-          onOpenChef={handleOpenChefForIngredient}
-          onOpenScaler={handleOpenScaler}
-        />
-      )}
+          {state.view === 'groceries' && state.selectedRecipe && (
+            <GroceryChecklist
+              recipe={state.selectedRecipe}
+              onComplete={handleGroceriesComplete}
+              onBack={handleBackToDetail}
+              onOpenChef={handleOpenChefForIngredient}
+              onOpenScaler={handleOpenScaler}
+            />
+          )}
 
-      {view === 'miseenplace' && selectedRecipe && (
-        <MiseEnPlace
-          recipe={selectedRecipe}
-          onComplete={handleMiseEnPlaceComplete}
-          onBack={handleBackFromMiseEnPlace}
-        />
-      )}
+          {state.view === 'miseenplace' && state.selectedRecipe && (
+            <MiseEnPlace
+              recipe={state.selectedRecipe}
+              onComplete={handleMiseEnPlaceComplete}
+              onBack={handleBackFromMiseEnPlace}
+            />
+          )}
 
-      {view === 'cooking' && selectedRecipe && (
-        <StepExecutor
-          recipe={selectedRecipe}
-          checkedIngredients={checkedIngredients}
-          onComplete={handleCookingComplete}
-          onOpenChef={handleOpenChef}
-          onBack={handleBackToGroceries}
-        />
-      )}
+          {state.view === 'cooking' && state.selectedRecipe && (
+            <StepExecutor
+              recipe={state.selectedRecipe}
+              checkedIngredients={state.checkedIngredients}
+              onComplete={handleCookingComplete}
+              onOpenChef={handleOpenChef}
+              onBack={handleBackToGroceries}
+            />
+          )}
 
-      {view === 'complete' && selectedRecipe && (
-        <CookCompletion
-          recipe={selectedRecipe}
-          checkedIngredients={checkedIngredients}
-          onComplete={handleCompletionFinished}
-          onCookAgain={handleCookAgain}
-        />
-      )}
+          {state.view === 'complete' && state.selectedRecipe && (
+            <CookCompletion
+              recipe={state.selectedRecipe}
+              checkedIngredients={state.checkedIngredients}
+              onComplete={handleCompletionFinished}
+              onCookAgain={handleCookAgain}
+            />
+          )}
 
-      {view === 'mealplanner' && (
-        <MealPlanner
-          onViewGroceryList={handleViewMealPlanGroceries}
-          onBack={handleBackFromMealPlanner}
-        />
-      )}
+          {state.view === 'mealplanner' && (
+            <MealPlanner
+              onViewGroceryList={handleViewMealPlanGroceries}
+              onBack={handleBackFromMealPlanner}
+            />
+          )}
 
-      {view === 'mealplangroceries' && selectedMealPlanId && (
-        <MealPlanGroceryList
-          planId={selectedMealPlanId}
-          onBack={handleBackFromMealPlanGroceries}
-        />
-      )}
+          {state.view === 'mealplangroceries' && state.selectedMealPlanId && (
+            <MealPlanGroceryList
+              planId={state.selectedMealPlanId}
+              onBack={handleBackFromMealPlanGroceries}
+            />
+          )}
 
-      {view === 'inventory' && (
-        <InventoryManager
-          onBack={handleBackFromInventory}
-        />
-      )}
+          {state.view === 'inventory' && (
+            <InventoryManager
+              onBack={handleBackFromInventory}
+            />
+          )}
 
-      {/* Recipe Scaler Modal */}
-      {showScaler && selectedRecipe && (
-        <RecipeScaler
-          recipe={selectedRecipe}
-          onApply={handleApplyScaling}
-          onCancel={handleCancelScaling}
-        />
-      )}
+          {/* Recipe Scaler Modal */}
+          {state.showScaler && state.selectedRecipe && (
+            <RecipeScaler
+              recipe={state.selectedRecipe}
+              onApply={handleApplyScaling}
+              onCancel={handleCancelScaling}
+            />
+          )}
 
-        {/* Chef Ollama Overlay */}
-        {showChefOllama && selectedRecipe && (
-          <ChefOllamaChat
-            recipe={selectedRecipe}
-            currentStepIndex={0}
-            checkedIngredients={checkedIngredients}
-            initialMessage={chefInitialMessage}
-            onClose={handleCloseChef}
-          />
-        )}
-      </div>
+          {/* Chef Ollama Overlay */}
+          {state.showChefOllama && state.selectedRecipe && (
+            <ChefOllamaChat
+              recipe={state.selectedRecipe}
+              currentStepIndex={0}
+              checkedIngredients={state.checkedIngredients}
+              initialMessage={state.chefInitialMessage}
+              onClose={handleCloseChef}
+            />
+          )}
+        </div>
       </KeyboardShortcutsProvider>
     </ThemeProvider>
   );

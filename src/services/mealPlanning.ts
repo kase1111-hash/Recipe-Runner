@@ -4,6 +4,7 @@
 import { v4 as uuid } from 'uuid';
 import { getRecipe } from '../db';
 import type { Recipe } from '../types';
+import { parseAmount as parseAmountUtil } from './utils';
 
 // ============================================
 // Types
@@ -305,21 +306,9 @@ function normalizeUnit(unit: string): string {
   return unitMap[lower] || lower;
 }
 
+// Use shared utility with unicode fraction support
 function parseAmount(amount: string): number {
-  let value = 0;
-  const parts = amount.trim().split(/\s+/);
-
-  for (const part of parts) {
-    if (part.includes('/')) {
-      const [num, denom] = part.split('/').map(Number);
-      if (denom) value += num / denom;
-    } else {
-      const num = parseFloat(part);
-      if (!isNaN(num)) value += num;
-    }
-  }
-
-  return value || 1;
+  return parseAmountUtil(amount, 1);
 }
 
 export async function generateGroceryListFromPlan(planId: string): Promise<AggregatedIngredient[]> {

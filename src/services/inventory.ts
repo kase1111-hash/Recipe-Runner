@@ -3,6 +3,7 @@
 
 import type { Recipe, Ingredient } from '../types';
 import { type PantryCategory, detectCategory } from './pantry';
+import { parseAmount as parseAmountUtil } from './utils';
 
 // ============================================
 // Types
@@ -138,21 +139,9 @@ function convertAmount(amount: number, fromUnit: string, toUnit: string): number
   return amount; // Can't convert, return as-is
 }
 
+// Use shared utility with unicode fraction support
 function parseAmount(amount: string): number {
-  let value = 0;
-  const parts = amount.trim().split(/\s+/);
-
-  for (const part of parts) {
-    if (part.includes('/')) {
-      const [num, denom] = part.split('/').map(Number);
-      if (denom) value += num / denom;
-    } else {
-      const num = parseFloat(part);
-      if (!isNaN(num)) value += num;
-    }
-  }
-
-  return value || 1;
+  return parseAmountUtil(amount, 1);
 }
 
 // ============================================

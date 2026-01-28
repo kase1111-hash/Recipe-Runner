@@ -1,7 +1,80 @@
 // Recipe Runner Database
 // IndexedDB with Dexie.js
 
-import Dexie, { type Table } from 'dexie';
+import Dexie, { type Table, type DexieError } from 'dexie';
+
+// ============================================
+// Error Handling Utilities
+// ============================================
+
+/**
+ * Custom database error class with meaningful messages
+ */
+export class DatabaseError extends Error {
+  public readonly operation: string;
+  public readonly originalError?: Error;
+
+  constructor(message: string, operation: string, originalError?: Error) {
+    super(message);
+    this.name = 'DatabaseError';
+    this.operation = operation;
+    this.originalError = originalError;
+  }
+}
+
+/**
+ * Wrap database operations with proper error handling
+ */
+async function withErrorHandling<T>(
+  operation: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    const dexieError = error as DexieError;
+
+    // Handle specific Dexie error types
+    if (dexieError.name === 'ConstraintError') {
+      throw new DatabaseError(
+        `Duplicate entry: A record with this ID already exists`,
+        operation,
+        dexieError
+      );
+    }
+
+    if (dexieError.name === 'NotFoundError') {
+      throw new DatabaseError(
+        `Record not found`,
+        operation,
+        dexieError
+      );
+    }
+
+    if (dexieError.name === 'QuotaExceededError') {
+      throw new DatabaseError(
+        `Storage quota exceeded. Please clear some data or free up space.`,
+        operation,
+        dexieError
+      );
+    }
+
+    if (dexieError.name === 'DatabaseClosedError') {
+      throw new DatabaseError(
+        `Database connection closed unexpectedly. Please refresh the page.`,
+        operation,
+        dexieError
+      );
+    }
+
+    // Generic database error
+    throw new DatabaseError(
+      `Database operation failed: ${dexieError.message || 'Unknown error'}`,
+      operation,
+      dexieError
+    );
+  }
+}
 import type {
   Cookbook,
   Recipe,
@@ -21,7 +94,7 @@ export class RecipeRunnerDB extends Dexie {
   recipes!: Table<Recipe>;
   cookingSessions!: Table<CookingSession>;
   cookHistory!: Table<CookHistory & { id: string; recipe_id: string }>;
-  imageCache!: Table<{ id: string; recipe_id: string; step_index: number; image_data: string; version: number; created_at: string }>;
+  imageCache!: Table<{ id: string; recipe_id: string; step_index: number; image_data: string | Blob; version: number; created_at: string }>;
   bookshelves!: Table<Bookshelf>;
 
   constructor() {
@@ -54,28 +127,38 @@ export const db = new RecipeRunnerDB();
 // ============================================
 
 export async function createCookbook(cookbook: Cookbook): Promise<string> {
-  return await db.cookbooks.add(cookbook);
+  return withErrorHandling('createCookbook', async () => {
+    return await db.cookbooks.add(cookbook);
+  });
 }
 
 export async function getCookbook(id: string): Promise<Cookbook | undefined> {
-  return await db.cookbooks.get(id);
+  return withErrorHandling('getCookbook', async () => {
+    return await db.cookbooks.get(id);
+  });
 }
 
 export async function getAllCookbooks(): Promise<Cookbook[]> {
-  return await db.cookbooks.orderBy('modified_at').reverse().toArray();
+  return withErrorHandling('getAllCookbooks', async () => {
+    return await db.cookbooks.orderBy('modified_at').reverse().toArray();
+  });
 }
 
 export async function updateCookbook(id: string, updates: Partial<Cookbook>): Promise<number> {
-  return await db.cookbooks.update(id, {
-    ...updates,
-    modified_at: new Date().toISOString(),
+  return withErrorHandling('updateCookbook', async () => {
+    return await db.cookbooks.update(id, {
+      ...updates,
+      modified_at: new Date().toISOString(),
+    });
   });
 }
 
 export async function deleteCookbook(id: string): Promise<void> {
-  await db.transaction('rw', [db.cookbooks, db.recipes], async () => {
-    await db.recipes.where('cookbook_id').equals(id).delete();
-    await db.cookbooks.delete(id);
+  return withErrorHandling('deleteCookbook', async () => {
+    await db.transaction('rw', [db.cookbooks, db.recipes], async () => {
+      await db.recipes.where('cookbook_id').equals(id).delete();
+      await db.cookbooks.delete(id);
+    });
   });
 }
 
@@ -96,39 +179,49 @@ export async function createBookshelf(bookshelf: Bookshelf): Promise<string> {
 }
 
 export async function getBookshelf(id: string): Promise<Bookshelf | undefined> {
-  return await db.bookshelves.get(id);
+  return withErrorHandling('getBookshelf', async () => {
+    return await db.bookshelves.get(id);
+  });
 }
 
 export async function getAllBookshelves(): Promise<Bookshelf[]> {
-  return await db.bookshelves.orderBy('sort_order').toArray();
+  return withErrorHandling('getAllBookshelves', async () => {
+    return await db.bookshelves.orderBy('sort_order').toArray();
+  });
 }
 
 export async function updateBookshelf(id: string, updates: Partial<Bookshelf>): Promise<number> {
-  return await db.bookshelves.update(id, {
-    ...updates,
-    modified_at: new Date().toISOString(),
+  return withErrorHandling('updateBookshelf', async () => {
+    return await db.bookshelves.update(id, {
+      ...updates,
+      modified_at: new Date().toISOString(),
+    });
   });
 }
 
 export async function deleteBookshelf(id: string): Promise<void> {
-  // Remove bookshelf_id from all associated cookbooks
-  await db.transaction('rw', [db.bookshelves, db.cookbooks], async () => {
-    const cookbooks = await db.cookbooks.where('bookshelf_id').equals(id).toArray();
-    for (const cookbook of cookbooks) {
-      await db.cookbooks.update(cookbook.id, { bookshelf_id: null });
-    }
-    await db.bookshelves.delete(id);
+  return withErrorHandling('deleteBookshelf', async () => {
+    // Remove bookshelf_id from all associated cookbooks
+    await db.transaction('rw', [db.bookshelves, db.cookbooks], async () => {
+      const cookbooks = await db.cookbooks.where('bookshelf_id').equals(id).toArray();
+      for (const cookbook of cookbooks) {
+        await db.cookbooks.update(cookbook.id, { bookshelf_id: null });
+      }
+      await db.bookshelves.delete(id);
+    });
   });
 }
 
 export async function reorderBookshelves(orderedIds: string[]): Promise<void> {
-  await db.transaction('rw', db.bookshelves, async () => {
-    for (let i = 0; i < orderedIds.length; i++) {
-      await db.bookshelves.update(orderedIds[i], {
-        sort_order: i,
-        modified_at: new Date().toISOString(),
-      });
-    }
+  return withErrorHandling('reorderBookshelves', async () => {
+    await db.transaction('rw', db.bookshelves, async () => {
+      for (let i = 0; i < orderedIds.length; i++) {
+        await db.bookshelves.update(orderedIds[i], {
+          sort_order: i,
+          modified_at: new Date().toISOString(),
+        });
+      }
+    });
   });
 }
 
@@ -137,11 +230,15 @@ export async function reorderBookshelves(orderedIds: string[]): Promise<void> {
 // ============================================
 
 export async function createRecipe(recipe: Recipe): Promise<string> {
-  return await db.recipes.add(recipe);
+  return withErrorHandling('createRecipe', async () => {
+    return await db.recipes.add(recipe);
+  });
 }
 
 export async function getRecipe(id: string): Promise<Recipe | undefined> {
-  return await db.recipes.get(id);
+  return withErrorHandling('getRecipe', async () => {
+    return await db.recipes.get(id);
+  });
 }
 
 export async function getRecipesByCookbook(cookbookId: string): Promise<Recipe[]> {

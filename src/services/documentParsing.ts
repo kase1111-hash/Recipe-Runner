@@ -4,8 +4,43 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker with fallback options
+// Try multiple sources for reliability
+const PDF_WORKER_SOURCES = [
+  // Local worker (if bundled via Vite)
+  new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href,
+  // jsDelivr CDN (more reliable than cdnjs)
+  `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`,
+  // Unpkg CDN fallback
+  `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`,
+  // cdnjs fallback (legacy)
+  `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`,
+];
+
+// Try to set up the worker with the first available source
+async function initPdfWorker(): Promise<void> {
+  for (const src of PDF_WORKER_SOURCES) {
+    try {
+      // Test if the worker URL is accessible
+      const response = await fetch(src, { method: 'HEAD', mode: 'cors' });
+      if (response.ok) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = src;
+        return;
+      }
+    } catch {
+      // Try next source
+      continue;
+    }
+  }
+  // Fallback to first source even if we couldn't verify
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SOURCES[0];
+}
+
+// Initialize worker on module load (non-blocking)
+let workerInitialized = false;
+const workerPromise = initPdfWorker().then(() => {
+  workerInitialized = true;
+});
 
 // ============================================
 // Types
@@ -39,6 +74,11 @@ export async function extractTextFromPDF(
     message: 'Loading PDF document...',
     progress: 5,
   });
+
+  // Ensure PDF worker is initialized
+  if (!workerInitialized) {
+    await workerPromise;
+  }
 
   try {
     // Read file as ArrayBuffer

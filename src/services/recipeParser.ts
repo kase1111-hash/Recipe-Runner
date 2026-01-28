@@ -125,14 +125,57 @@ Recipe:
 // URL Fetching
 // ============================================
 
+// List of known CORS proxies (try in order)
+const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?',
+];
+
+/**
+ * Attempt to fetch URL through CORS proxies
+ */
+async function fetchWithCorsProxy(url: string): Promise<Response> {
+  // First try direct fetch (works for same-origin or CORS-enabled sites)
+  try {
+    const directResponse = await fetch(url, {
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    if (directResponse.ok) {
+      return directResponse;
+    }
+  } catch {
+    // Direct fetch failed (likely CORS), try proxies
+  }
+
+  // Try CORS proxies
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const proxyUrl = proxy + encodeURIComponent(url);
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      });
+      if (response.ok) {
+        return response;
+      }
+    } catch {
+      // This proxy failed, try next
+      continue;
+    }
+  }
+
+  throw new Error(
+    'Could not fetch URL due to CORS restrictions. ' +
+    'Please copy and paste the recipe text manually, or use the "Import from Text" option instead.'
+  );
+}
+
 async function fetchRecipeFromUrl(url: string): Promise<string> {
   try {
-    // Use a CORS proxy or server-side fetch in production
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch URL: ${response.status}`);
-    }
-
+    const response = await fetchWithCorsProxy(url);
     const html = await response.text();
 
     // Extract text content from HTML
@@ -177,6 +220,9 @@ async function fetchRecipeFromUrl(url: string): Promise<string> {
 
     return content;
   } catch (error) {
+    if (error instanceof Error && error.message.includes('CORS')) {
+      throw error; // Re-throw CORS errors with helpful message
+    }
     throw new Error(`Failed to fetch recipe from URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
