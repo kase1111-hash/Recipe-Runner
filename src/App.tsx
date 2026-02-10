@@ -8,9 +8,7 @@ import { StepExecutor } from './components/step/StepExecutor';
 import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
 import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
-import { MealPlanner, MealPlanGroceryList } from './components/mealplan';
-import { InventoryManager } from './components/inventory';
-import { initializeDatabase, getRecipe, getCookbook } from './db';
+import { initializeDatabase, getRecipe } from './db';
 import { seedSampleData } from './data/sampleCookbook';
 import type { Cookbook, Recipe, Ingredient } from './types';
 import type { ParsedRecipe } from './services/recipeParser';
@@ -30,10 +28,7 @@ type AppView =
   | 'groceries'
   | 'miseenplace'
   | 'cooking'
-  | 'complete'
-  | 'mealplanner'
-  | 'mealplangroceries'
-  | 'inventory';
+  | 'complete';
 
 interface AppState {
   initialized: boolean;
@@ -46,7 +41,6 @@ interface AppState {
   chefInitialMessage: string | undefined;
   refreshKey: number;
   showScaler: boolean;
-  selectedMealPlanId: string | null;
 }
 
 // ============================================
@@ -66,7 +60,6 @@ type AppAction =
   | { type: 'OPEN_SCALER' }
   | { type: 'APPLY_SCALING'; recipe: Recipe }
   | { type: 'CLOSE_SCALER' }
-  | { type: 'SELECT_MEAL_PLAN'; planId: string }
   | { type: 'BACK_TO_LIBRARY' }
   | { type: 'BACK_TO_COOKBOOK' }
   | { type: 'UPDATE_RECIPE'; recipe: Recipe };
@@ -86,7 +79,6 @@ const initialState: AppState = {
   chefInitialMessage: undefined,
   refreshKey: 0,
   showScaler: false,
-  selectedMealPlanId: null,
 };
 
 // ============================================
@@ -155,13 +147,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'CLOSE_SCALER':
       return { ...state, showScaler: false };
-
-    case 'SELECT_MEAL_PLAN':
-      return {
-        ...state,
-        selectedMealPlanId: action.planId,
-        view: 'mealplangroceries',
-      };
 
     case 'BACK_TO_LIBRARY':
       return {
@@ -311,30 +296,6 @@ function App() {
     dispatch({ type: 'NAVIGATE', view: 'groceries' });
   }, []);
 
-  const handleOpenMealPlanner = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'mealplanner' });
-  }, []);
-
-  const handleViewMealPlanGroceries = useCallback((planId: string) => {
-    dispatch({ type: 'SELECT_MEAL_PLAN', planId });
-  }, []);
-
-  const handleBackFromMealPlanner = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'library' });
-  }, []);
-
-  const handleBackFromMealPlanGroceries = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'mealplanner' });
-  }, []);
-
-  const handleOpenInventory = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'inventory' });
-  }, []);
-
-  const handleBackFromInventory = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'library' });
-  }, []);
-
   const handleOpenBookshelf = useCallback(() => {
     dispatch({ type: 'NAVIGATE', view: 'bookshelf' });
   }, []);
@@ -345,14 +306,6 @@ function App() {
 
   const handleSelectCookbookFromBookshelf = useCallback((cookbook: Cookbook) => {
     dispatch({ type: 'SELECT_COOKBOOK', cookbook });
-  }, []);
-
-  const handleSelectSideDish = useCallback(async (sideDishRecipe: Recipe) => {
-    const cookbook = await getCookbook(sideDishRecipe.cookbook_id);
-    if (cookbook) {
-      dispatch({ type: 'SELECT_COOKBOOK', cookbook });
-    }
-    dispatch({ type: 'SELECT_RECIPE', recipe: sideDishRecipe });
   }, []);
 
   // ============================================
@@ -391,8 +344,6 @@ function App() {
           {state.view === 'library' && (
             <CookbookLibrary
               onSelectCookbook={handleSelectCookbook}
-              onOpenMealPlanner={handleOpenMealPlanner}
-              onOpenInventory={handleOpenInventory}
               onOpenBookshelf={handleOpenBookshelf}
             />
           )}
@@ -419,7 +370,6 @@ function App() {
               recipe={state.selectedRecipe}
               onStartCooking={handleStartCooking}
               onBack={handleBackToCookbook}
-              onSelectSideDish={handleSelectSideDish}
             />
           )}
 
@@ -471,29 +421,8 @@ function App() {
           {state.view === 'complete' && state.selectedRecipe && (
             <CookCompletion
               recipe={state.selectedRecipe}
-              checkedIngredients={state.checkedIngredients}
               onComplete={handleCompletionFinished}
               onCookAgain={handleCookAgain}
-            />
-          )}
-
-          {state.view === 'mealplanner' && (
-            <MealPlanner
-              onViewGroceryList={handleViewMealPlanGroceries}
-              onBack={handleBackFromMealPlanner}
-            />
-          )}
-
-          {state.view === 'mealplangroceries' && state.selectedMealPlanId && (
-            <MealPlanGroceryList
-              planId={state.selectedMealPlanId}
-              onBack={handleBackFromMealPlanGroceries}
-            />
-          )}
-
-          {state.view === 'inventory' && (
-            <InventoryManager
-              onBack={handleBackFromInventory}
             />
           )}
 

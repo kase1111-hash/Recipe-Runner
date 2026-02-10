@@ -2,30 +2,23 @@
 // Phase 5 Feature - View recipe with cook history
 
 import { useState } from 'react';
-import { Button, Card, DifficultyBadge, NutritionDisplay, CostDisplay, ShareButton } from '../common';
-import { DietaryWarnings } from './DietaryWarnings';
-import { SideDishSuggestions } from './SideDishSuggestions';
+import { Button, Card, DifficultyBadge, ShareButton } from '../common';
 import { exportRecipe, downloadAsFile, copyToClipboard } from '../../services/export';
-import type { Recipe, AdaptedRecipe } from '../../types';
+import type { Recipe } from '../../types';
 import { CourseTypeLabels } from '../../types';
 
 interface RecipeDetailProps {
   recipe: Recipe;
   onStartCooking: () => void;
   onBack: () => void;
-  onSelectSideDish?: (recipe: Recipe) => void;  // Optional callback for viewing side dish suggestions
 }
 
 type Tab = 'overview' | 'ingredients' | 'history';
 
-export function RecipeDetail({ recipe, onStartCooking, onBack, onSelectSideDish }: RecipeDetailProps) {
+export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [showExport, setShowExport] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
-  const [adaptedRecipe, setAdaptedRecipe] = useState<AdaptedRecipe | null>(null);
-
-  // Use adapted recipe if available, otherwise original
-  const displayRecipe = adaptedRecipe || recipe;
 
   const cookCount = recipe.cook_history.length;
   const avgRating = cookCount > 0
@@ -183,20 +176,6 @@ export function RecipeDetail({ recipe, onStartCooking, onBack, onSelectSideDish 
             )}
           </div>
         </Card>
-      )}
-
-      {/* Dietary Warnings & Adaptation */}
-      <DietaryWarnings
-        recipe={recipe}
-        onRecipeAdapted={setAdaptedRecipe}
-      />
-
-      {/* Side Dish Suggestions for Main Courses */}
-      {onSelectSideDish && (
-        <SideDishSuggestions
-          recipe={recipe}
-          onSelectRecipe={onSelectSideDish}
-        />
       )}
 
       {/* Tabs */}
@@ -363,16 +342,6 @@ export function RecipeDetail({ recipe, onStartCooking, onBack, onSelectSideDish 
             </Card>
           )}
 
-          {/* Nutrition */}
-          <div style={{ marginBottom: '1rem' }}>
-            <NutritionDisplay recipe={recipe} />
-          </div>
-
-          {/* Cost */}
-          <div style={{ marginBottom: '1rem' }}>
-            <CostDisplay recipe={recipe} />
-          </div>
-
           {/* Steps Preview */}
           <Card style={{ padding: '1rem' }}>
             <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>
@@ -428,18 +397,17 @@ export function RecipeDetail({ recipe, onStartCooking, onBack, onSelectSideDish 
       {activeTab === 'ingredients' && (
         <Card style={{ padding: '1rem' }}>
           <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>
-            🥬 Ingredients ({displayRecipe.ingredients.length})
-            {adaptedRecipe && <span style={{ color: 'var(--success)', marginLeft: '0.5rem' }}>(Adapted)</span>}
+            🥬 Ingredients ({recipe.ingredients.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {displayRecipe.ingredients.map((ing, idx) => (
+            {recipe.ingredients.map((ing, idx) => (
               <div
                 key={idx}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
                   padding: '0.5rem',
-                  borderBottom: idx < displayRecipe.ingredients.length - 1 ? '1px solid var(--border-primary)' : 'none',
+                  borderBottom: idx < recipe.ingredients.length - 1 ? '1px solid var(--border-primary)' : 'none',
                 }}
               >
                 <span style={{ fontWeight: 600, color: 'var(--text-secondary)', minWidth: '80px' }}>

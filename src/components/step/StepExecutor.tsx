@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { Card, Button, Timer, ProgressBar } from '../common';
-import { StepVisual } from './StepVisual';
-import { VisualSettings } from '../settings/VisualSettings';
 import type { Recipe } from '../../types';
 
 interface StepExecutorProps {
@@ -19,7 +17,6 @@ export function StepExecutor({
   onBack,
 }: StepExecutorProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [showVisualSettings, setShowVisualSettings] = useState(false);
 
   const currentStep = recipe.steps[currentStepIndex];
   const isFirstStep = currentStepIndex === 0;
@@ -87,14 +84,9 @@ export function StepExecutor({
             </div>
             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{recipe.name}</div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Button variant="ghost" onClick={() => setShowVisualSettings(true)}>
-              ⚙️
-            </Button>
-            <Button variant="ghost" onClick={onOpenChef}>
-              👨‍🍳 Help
-            </Button>
-          </div>
+          <Button variant="ghost" onClick={onOpenChef}>
+            👨‍🍳 Help
+          </Button>
         </div>
         <div style={{ maxWidth: '1000px', margin: '0.75rem auto 0' }}>
           <ProgressBar
@@ -164,13 +156,6 @@ export function StepExecutor({
             {currentStep.instruction}
           </p>
         </Card>
-
-        {/* Visual Reference (Phase 8 Enhanced) */}
-        <StepVisual
-          recipeId={recipe.id}
-          step={currentStep}
-          allSteps={recipe.steps}
-        />
 
         {/* Tip */}
         {currentStep.tip && (
@@ -291,10 +276,6 @@ export function StepExecutor({
         </div>
       </footer>
 
-      {/* Visual Settings Modal */}
-      {showVisualSettings && (
-        <VisualSettings onClose={() => setShowVisualSettings(false)} />
-      )}
     </div>
   );
 }

@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { Button, Card } from '../common';
-import { DietarySettings } from './DietarySettings';
 import { useTheme, type ThemeMode } from '../../contexts';
 import { getPreferences, savePreferences } from '../../db';
 import type { UserPreferences } from '../../types';
@@ -12,7 +11,7 @@ interface GeneralSettingsProps {
   onClose: () => void;
 }
 
-type SettingsTab = 'general' | 'cooking' | 'visual' | 'ai' | 'dietary' | 'shortcuts';
+type SettingsTab = 'general' | 'cooking' | 'ai' | 'shortcuts';
 
 export function GeneralSettings({ onClose }: GeneralSettingsProps) {
   const { mode, setMode } = useTheme();
@@ -31,8 +30,6 @@ export function GeneralSettings({ onClose }: GeneralSettingsProps) {
   const tabs: { id: SettingsTab; label: string; icon: string }[] = [
     { id: 'general', label: 'General', icon: '⚙️' },
     { id: 'cooking', label: 'Cooking', icon: '🍳' },
-    { id: 'dietary', label: 'Dietary', icon: '🥗' },
-    { id: 'visual', label: 'Visual', icon: '🎨' },
     { id: 'ai', label: 'AI Settings', icon: '🤖' },
     { id: 'shortcuts', label: 'Shortcuts', icon: '⌨️' },
   ];
@@ -229,34 +226,6 @@ export function GeneralSettings({ onClose }: GeneralSettingsProps) {
             </div>
           )}
 
-          {activeTab === 'dietary' && (
-            <DietarySettings embedded />
-          )}
-
-          {activeTab === 'visual' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {/* Auto Generate Visuals */}
-              <SettingSection title="Auto-Generate Visuals" description="Automatically generate step images using AI">
-                <ToggleSwitch
-                  checked={preferences.auto_generate_visuals}
-                  onChange={(checked) => updatePreferences({ auto_generate_visuals: checked })}
-                />
-              </SettingSection>
-
-              <Card style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)' }}>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '1.25rem' }}>💡</span>
-                  <div>
-                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Visual Settings</div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                      For more visual options (style, prefetching, API provider), use the Visual Settings button (⚙️) in the cooking view.
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          )}
-
           {activeTab === 'ai' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Ollama Endpoint */}
@@ -430,43 +399,6 @@ function SettingSection({ title, description, children }: SettingSectionProps) {
       </div>
       {children}
     </div>
-  );
-}
-
-interface ToggleSwitchProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}
-
-function ToggleSwitch({ checked, onChange }: ToggleSwitchProps) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      style={{
-        width: '3rem',
-        height: '1.5rem',
-        borderRadius: '9999px',
-        border: 'none',
-        background: checked ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-        cursor: 'pointer',
-        position: 'relative',
-        transition: 'background 0.2s',
-      }}
-    >
-      <div
-        style={{
-          width: '1.25rem',
-          height: '1.25rem',
-          borderRadius: '50%',
-          background: 'white',
-          position: 'absolute',
-          top: '0.125rem',
-          left: checked ? '1.625rem' : '0.125rem',
-          transition: 'left 0.2s',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-        }}
-      />
-    </button>
   );
 }
 

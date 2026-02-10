@@ -3,8 +3,6 @@ export { Card } from './Card';
 export { Timer } from './Timer';
 export { ProgressBar } from './ProgressBar';
 export { DifficultyBadge } from './DifficultyBadge';
-export { NutritionDisplay, NutritionBadge } from './NutritionDisplay';
-export { CostDisplay, CostBadge, RecipeCostBadge } from './CostDisplay';
 export { ShareModal, ShareButton } from './ShareModal';
 export { FavoriteButton } from './FavoriteButton';
 export { ErrorBoundary } from './ErrorBoundary';
