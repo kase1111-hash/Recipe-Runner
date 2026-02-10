@@ -1,29 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Button, Timer, ProgressBar } from '../common';
-import { StepVisual } from './StepVisual';
-import { VisualSettings } from '../settings/VisualSettings';
+import { saveCookingSession, deleteCookingSession } from '../../db';
 import type { Recipe } from '../../types';
 
 interface StepExecutorProps {
   recipe: Recipe;
   checkedIngredients: string[];
   onComplete: () => void;
-  onOpenChef: () => void;
+  onOpenChef: (stepIndex?: number) => void;
   onBack: () => void;
+  initialStepIndex?: number;
 }
 
 export function StepExecutor({
   recipe,
+  checkedIngredients,
   onComplete,
   onOpenChef,
   onBack,
+  initialStepIndex = 0,
 }: StepExecutorProps) {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [showVisualSettings, setShowVisualSettings] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(initialStepIndex);
 
   const currentStep = recipe.steps[currentStepIndex];
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === recipe.steps.length - 1;
+
+  // Save cooking session on every step change
+  useEffect(() => {
+    saveCookingSession({
+      recipeId: recipe.id,
+      cookbookId: recipe.cookbook_id,
+      currentStepIndex,
+      checkedIngredients,
+      activeTimers: [],
+      startedAt: new Date().toISOString(),
+      notes: '',
+    }).catch(() => {
+      // Session save is best-effort
+    });
+  }, [currentStepIndex, recipe.id, recipe.cookbook_id, checkedIngredients]);
 
   // Guard against empty steps array
   if (!currentStep) {
@@ -37,6 +53,7 @@ export function StepExecutor({
 
   function goToNextStep() {
     if (isLastStep) {
+      deleteCookingSession(recipe.id).catch(() => {});
       onComplete();
     } else {
       setCurrentStepIndex((prev) => prev + 1);
@@ -87,14 +104,9 @@ export function StepExecutor({
             </div>
             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{recipe.name}</div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Button variant="ghost" onClick={() => setShowVisualSettings(true)}>
-              ⚙️
-            </Button>
-            <Button variant="ghost" onClick={onOpenChef}>
-              👨‍🍳 Help
-            </Button>
-          </div>
+          <Button variant="ghost" onClick={() => onOpenChef(currentStepIndex)}>
+            👨‍🍳 Help
+          </Button>
         </div>
         <div style={{ maxWidth: '1000px', margin: '0.75rem auto 0' }}>
           <ProgressBar
@@ -164,13 +176,6 @@ export function StepExecutor({
             {currentStep.instruction}
           </p>
         </Card>
-
-        {/* Visual Reference (Phase 8 Enhanced) */}
-        <StepVisual
-          recipeId={recipe.id}
-          step={currentStep}
-          allSteps={recipe.steps}
-        />
 
         {/* Tip */}
         {currentStep.tip && (
@@ -291,10 +296,6 @@ export function StepExecutor({
         </div>
       </footer>
 
-      {/* Visual Settings Modal */}
-      {showVisualSettings && (
-        <VisualSettings onClose={() => setShowVisualSettings(false)} />
-      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
 import { createRecipe } from '../../db';
 import type { Cookbook, Ingredient, Step, DifficultyScore, CourseType } from '../../types';
 import { CourseTypeLabels } from '../../types';
-import { getRecommendedCourseTypes } from '../../services/sideDishSuggestions';
+
 
 const CUISINE_OPTIONS = [
   'American',
@@ -367,23 +367,6 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                 </p>
               </div>
             </div>
-            {/* Auto-detect suggestion */}
-            {!recipe.course_type && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const suggestions = getRecommendedCourseTypes(recipe as any);
-                    if (suggestions.length > 0) {
-                      updateRecipe({ course_type: suggestions[0] });
-                    }
-                  }}
-                >
-                  Auto-detect course type
-                </Button>
-              </div>
-            )}
           </Card>
 
           <Card>

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // Keyboard Shortcuts System
 // Phase 10 Feature - Keyboard shortcuts for power users
 
@@ -128,7 +129,8 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
 
   function unregisterShortcut(id: string) {
     setHandlers((prev) => {
-      const { [id]: _, ...rest } = prev;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [id]: _removed, ...rest } = prev;
       return rest;
     });
   }

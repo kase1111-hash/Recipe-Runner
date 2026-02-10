@@ -27,16 +27,7 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
   const [displayCount, setDisplayCount] = useState(RECIPES_PER_PAGE);
   const listRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadRecipes();
-  }, [cookbook.id]);
-
-  // Reset display count when filters change
-  useEffect(() => {
-    setDisplayCount(RECIPES_PER_PAGE);
-  }, [searchQuery, filter, sortBy, courseTypeFilter]);
-
-  async function loadRecipes() {
+  const loadRecipes = useCallback(async () => {
     try {
       const [data, counts] = await Promise.all([
         getRecipesByCookbook(cookbook.id),
@@ -49,7 +40,16 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
     } finally {
       setLoading(false);
     }
-  }
+  }, [cookbook.id]);
+
+  useEffect(() => {
+    loadRecipes();
+  }, [loadRecipes]);
+
+  // Reset display count when filters change
+  useEffect(() => {
+    setDisplayCount(RECIPES_PER_PAGE);
+  }, [searchQuery, filter, sortBy, courseTypeFilter]);
 
   // Load more recipes when scrolling near bottom
   const handleScroll = useCallback(() => {

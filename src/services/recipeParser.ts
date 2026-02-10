@@ -279,7 +279,7 @@ function extractJSON(text: string): unknown {
       return JSON.parse(jsonMatch[0]);
     } catch {
       // Try to fix common JSON issues
-      let fixed = jsonMatch[0]
+      const fixed = jsonMatch[0]
         .replace(/,\s*}/g, '}')
         .replace(/,\s*]/g, ']')
         .replace(/'/g, '"');
@@ -332,7 +332,7 @@ export async function parseRecipeFromText(
   onProgress?.({ stage: 'generating_prompts', message: 'Generating visual prompts...', progress: 60 });
 
   // Generate visual prompts for each step
-  parsed.steps = await generateVisualPrompts(parsed.steps, onProgress);
+  parsed.steps = await generateVisualPrompts(parsed.steps);
 
   onProgress?.({ stage: 'complete', message: 'Recipe parsed successfully!', progress: 100 });
 
@@ -368,7 +368,6 @@ export async function parseRecipeFromUrl(
 
 async function generateVisualPrompts(
   steps: Step[],
-  _onProgress?: (progress: ParseProgress) => void
 ): Promise<Step[]> {
   const stepsText = steps
     .map((s, i) => `Step ${i + 1}: "${s.title}" - ${s.instruction}`)

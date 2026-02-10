@@ -4,19 +4,16 @@
 import { useState } from 'react';
 import { Button, Card } from '../common';
 import { addCookHistoryEntry } from '../../db';
-import { recordIngredientsUsed } from '../../services/pantry';
 import type { Recipe, CookHistory } from '../../types';
 
 interface CookCompletionProps {
   recipe: Recipe;
-  checkedIngredients: string[];
   onComplete: () => void;
   onCookAgain: () => void;
 }
 
 export function CookCompletion({
   recipe,
-  checkedIngredients,
   onComplete,
   onCookAgain,
 }: CookCompletionProps) {
@@ -54,9 +51,6 @@ export function CookCompletion({
 
       // Save to database
       await addCookHistoryEntry(recipe.id, entry);
-
-      // Record ingredients in pantry memory
-      recordIngredientsUsed(checkedIngredients);
 
       setSaved(true);
     } catch (error) {

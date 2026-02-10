@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // Theme Context
 // Phase 10 Feature - Dark Mode and Theme Customization
 

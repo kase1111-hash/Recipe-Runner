@@ -8,11 +8,10 @@ import { StepExecutor } from './components/step/StepExecutor';
 import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
 import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
-import { MealPlanner, MealPlanGroceryList } from './components/mealplan';
-import { InventoryManager } from './components/inventory';
-import { initializeDatabase, getRecipe, getCookbook } from './db';
+import { useRouter } from './hooks/useRouter';
+import { initializeDatabase, getRecipe, getCookbook, getActiveCookingSession, deleteCookingSession } from './db';
 import { seedSampleData } from './data/sampleCookbook';
-import type { Cookbook, Recipe, Ingredient } from './types';
+import type { Cookbook, Recipe, Ingredient, CookingSession } from './types';
 import type { ParsedRecipe } from './services/recipeParser';
 import type { ScaledRecipe } from './services/recipeScaling';
 
@@ -30,10 +29,7 @@ type AppView =
   | 'groceries'
   | 'miseenplace'
   | 'cooking'
-  | 'complete'
-  | 'mealplanner'
-  | 'mealplangroceries'
-  | 'inventory';
+  | 'complete';
 
 interface AppState {
   initialized: boolean;
@@ -44,9 +40,11 @@ interface AppState {
   checkedIngredients: string[];
   showChefOllama: boolean;
   chefInitialMessage: string | undefined;
+  chefStepIndex: number;
   refreshKey: number;
   showScaler: boolean;
-  selectedMealPlanId: string | null;
+  resumeSession: CookingSession | null;
+  resumeStepIndex: number;
 }
 
 // ============================================
@@ -61,15 +59,16 @@ type AppAction =
   | { type: 'SET_PARSED_RECIPE'; parsedRecipe: ParsedRecipe | null }
   | { type: 'SAVE_RECIPE' }
   | { type: 'SET_CHECKED_INGREDIENTS'; ingredients: string[] }
-  | { type: 'OPEN_CHEF'; initialMessage?: string }
+  | { type: 'OPEN_CHEF'; initialMessage?: string; stepIndex?: number }
   | { type: 'CLOSE_CHEF' }
   | { type: 'OPEN_SCALER' }
   | { type: 'APPLY_SCALING'; recipe: Recipe }
   | { type: 'CLOSE_SCALER' }
-  | { type: 'SELECT_MEAL_PLAN'; planId: string }
   | { type: 'BACK_TO_LIBRARY' }
   | { type: 'BACK_TO_COOKBOOK' }
-  | { type: 'UPDATE_RECIPE'; recipe: Recipe };
+  | { type: 'UPDATE_RECIPE'; recipe: Recipe }
+  | { type: 'SET_RESUME_SESSION'; session: CookingSession | null }
+  | { type: 'RESUME_COOKING'; recipe: Recipe; cookbook: Cookbook; stepIndex: number; checkedIngredients: string[] };
 
 // ============================================
 // Initial State
@@ -84,9 +83,11 @@ const initialState: AppState = {
   checkedIngredients: [],
   showChefOllama: false,
   chefInitialMessage: undefined,
+  chefStepIndex: 0,
   refreshKey: 0,
   showScaler: false,
-  selectedMealPlanId: null,
+  resumeSession: null,
+  resumeStepIndex: 0,
 };
 
 // ============================================
@@ -99,7 +100,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, initialized: true };
 
     case 'NAVIGATE':
-      return { ...state, view: action.view };
+      return {
+        ...state,
+        view: action.view,
+        // Reset resume step when entering cooking normally (not via RESUME_COOKING)
+        ...(action.view === 'cooking' ? { resumeStepIndex: 0 } : {}),
+      };
 
     case 'SELECT_COOKBOOK':
       return { ...state, selectedCookbook: action.cookbook, view: 'cookbook' };
@@ -134,6 +140,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         showChefOllama: true,
         chefInitialMessage: action.initialMessage,
+        chefStepIndex: action.stepIndex ?? 0,
       };
 
     case 'CLOSE_CHEF':
@@ -156,13 +163,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'CLOSE_SCALER':
       return { ...state, showScaler: false };
 
-    case 'SELECT_MEAL_PLAN':
-      return {
-        ...state,
-        selectedMealPlanId: action.planId,
-        view: 'mealplangroceries',
-      };
-
     case 'BACK_TO_LIBRARY':
       return {
         ...state,
@@ -183,6 +183,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'UPDATE_RECIPE':
       return { ...state, selectedRecipe: action.recipe };
 
+    case 'SET_RESUME_SESSION':
+      return { ...state, resumeSession: action.session };
+
+    case 'RESUME_COOKING':
+      return {
+        ...state,
+        selectedCookbook: action.cookbook,
+        selectedRecipe: action.recipe,
+        checkedIngredients: action.checkedIngredients,
+        resumeStepIndex: action.stepIndex,
+        resumeSession: null,
+        view: 'cooking',
+      };
+
     default:
       return state;
   }
@@ -195,12 +209,27 @@ function appReducer(state: AppState, action: AppAction): AppState {
 function App() {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Initialize database and seed sample data
+  // Sync browser URL with app state for back-button and deep-linking
+  useRouter(
+    { view: state.view, selectedCookbook: state.selectedCookbook, selectedRecipe: state.selectedRecipe },
+    dispatch,
+  );
+
+  // Initialize database, seed sample data, and check for interrupted sessions
   useEffect(() => {
     async function init() {
       await initializeDatabase();
       await seedSampleData();
       dispatch({ type: 'INITIALIZE' });
+      // Check for interrupted cooking sessions
+      try {
+        const session = await getActiveCookingSession();
+        if (session) {
+          dispatch({ type: 'SET_RESUME_SESSION', session });
+        }
+      } catch {
+        // Session check is best-effort
+      }
     }
     init();
   }, []);
@@ -283,8 +312,8 @@ function App() {
     });
   }, []);
 
-  const handleOpenChef = useCallback(() => {
-    dispatch({ type: 'OPEN_CHEF' });
+  const handleOpenChef = useCallback((stepIndex?: number) => {
+    dispatch({ type: 'OPEN_CHEF', stepIndex });
   }, []);
 
   const handleCloseChef = useCallback(() => {
@@ -311,30 +340,6 @@ function App() {
     dispatch({ type: 'NAVIGATE', view: 'groceries' });
   }, []);
 
-  const handleOpenMealPlanner = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'mealplanner' });
-  }, []);
-
-  const handleViewMealPlanGroceries = useCallback((planId: string) => {
-    dispatch({ type: 'SELECT_MEAL_PLAN', planId });
-  }, []);
-
-  const handleBackFromMealPlanner = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'library' });
-  }, []);
-
-  const handleBackFromMealPlanGroceries = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'mealplanner' });
-  }, []);
-
-  const handleOpenInventory = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'inventory' });
-  }, []);
-
-  const handleBackFromInventory = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'library' });
-  }, []);
-
   const handleOpenBookshelf = useCallback(() => {
     dispatch({ type: 'NAVIGATE', view: 'bookshelf' });
   }, []);
@@ -347,13 +352,37 @@ function App() {
     dispatch({ type: 'SELECT_COOKBOOK', cookbook });
   }, []);
 
-  const handleSelectSideDish = useCallback(async (sideDishRecipe: Recipe) => {
-    const cookbook = await getCookbook(sideDishRecipe.cookbook_id);
-    if (cookbook) {
-      dispatch({ type: 'SELECT_COOKBOOK', cookbook });
+  const handleResumeCooking = useCallback(async () => {
+    if (!state.resumeSession) return;
+    const session = state.resumeSession;
+    try {
+      const [recipe, cookbook] = await Promise.all([
+        getRecipe(session.recipeId),
+        getCookbook(session.cookbookId),
+      ]);
+      if (recipe && cookbook) {
+        dispatch({
+          type: 'RESUME_COOKING',
+          recipe,
+          cookbook,
+          stepIndex: session.currentStepIndex,
+          checkedIngredients: session.checkedIngredients,
+        });
+      } else {
+        await deleteCookingSession(session.recipeId);
+        dispatch({ type: 'SET_RESUME_SESSION', session: null });
+      }
+    } catch {
+      dispatch({ type: 'SET_RESUME_SESSION', session: null });
     }
-    dispatch({ type: 'SELECT_RECIPE', recipe: sideDishRecipe });
-  }, []);
+  }, [state.resumeSession]);
+
+  const handleDismissResume = useCallback(async () => {
+    if (state.resumeSession) {
+      await deleteCookingSession(state.resumeSession.recipeId).catch(() => {});
+    }
+    dispatch({ type: 'SET_RESUME_SESSION', session: null });
+  }, [state.resumeSession]);
 
   // ============================================
   // Loading State
@@ -388,11 +417,67 @@ function App() {
     <ThemeProvider>
       <KeyboardShortcutsProvider>
         <div style={{ minHeight: '100vh', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          {/* Resume Interrupted Cook Banner */}
+          {state.resumeSession && state.view === 'library' && (
+            <div
+              style={{
+                background: 'var(--accent-light)',
+                border: '1px solid var(--accent-primary)',
+                borderRadius: '0.75rem',
+                padding: '1rem 1.5rem',
+                margin: '1rem 2rem 0',
+                maxWidth: '1200px',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Resume Cooking?
+                </div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
+                  You have an unfinished cooking session (step {state.resumeSession.currentStepIndex + 1})
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                <button
+                  onClick={handleResumeCooking}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: 'var(--accent-primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                  }}
+                >
+                  Resume
+                </button>
+                <button
+                  onClick={handleDismissResume}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: 'transparent',
+                    color: 'var(--text-tertiary)',
+                    border: '1px solid var(--border-secondary)',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
           {state.view === 'library' && (
             <CookbookLibrary
               onSelectCookbook={handleSelectCookbook}
-              onOpenMealPlanner={handleOpenMealPlanner}
-              onOpenInventory={handleOpenInventory}
               onOpenBookshelf={handleOpenBookshelf}
             />
           )}
@@ -419,7 +504,6 @@ function App() {
               recipe={state.selectedRecipe}
               onStartCooking={handleStartCooking}
               onBack={handleBackToCookbook}
-              onSelectSideDish={handleSelectSideDish}
             />
           )}
 
@@ -465,35 +549,15 @@ function App() {
               onComplete={handleCookingComplete}
               onOpenChef={handleOpenChef}
               onBack={handleBackToGroceries}
+              initialStepIndex={state.resumeStepIndex}
             />
           )}
 
           {state.view === 'complete' && state.selectedRecipe && (
             <CookCompletion
               recipe={state.selectedRecipe}
-              checkedIngredients={state.checkedIngredients}
               onComplete={handleCompletionFinished}
               onCookAgain={handleCookAgain}
-            />
-          )}
-
-          {state.view === 'mealplanner' && (
-            <MealPlanner
-              onViewGroceryList={handleViewMealPlanGroceries}
-              onBack={handleBackFromMealPlanner}
-            />
-          )}
-
-          {state.view === 'mealplangroceries' && state.selectedMealPlanId && (
-            <MealPlanGroceryList
-              planId={state.selectedMealPlanId}
-              onBack={handleBackFromMealPlanGroceries}
-            />
-          )}
-
-          {state.view === 'inventory' && (
-            <InventoryManager
-              onBack={handleBackFromInventory}
             />
           )}
 
@@ -510,7 +574,7 @@ function App() {
           {state.showChefOllama && state.selectedRecipe && (
             <ChefOllamaChat
               recipe={state.selectedRecipe}
-              currentStepIndex={0}
+              currentStepIndex={state.chefStepIndex}
               checkedIngredients={state.checkedIngredients}
               initialMessage={state.chefInitialMessage}
               onClose={handleCloseChef}

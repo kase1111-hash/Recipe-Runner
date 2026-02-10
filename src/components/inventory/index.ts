@@ -1,1 +1,0 @@
-export { InventoryManager } from './InventoryManager';

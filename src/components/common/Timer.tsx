@@ -44,7 +44,6 @@ function showNotification(title: string, body: string): void {
 }
 
 export function Timer({
-  id: _id,
   label,
   defaultSeconds,
   onComplete,
@@ -59,7 +58,6 @@ export function Timer({
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
-
   // Timer alert sound
   const alertSound = useRef<Howl | null>(null);
 
@@ -80,9 +78,10 @@ export function Timer({
     };
   }, []);
 
-  // Update remaining time when defaultSeconds changes
+  // Sync defaultSeconds prop to state when timer is idle
   useEffect(() => {
     if (state === 'idle') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTotalSeconds(defaultSeconds);
       setRemainingSeconds(defaultSeconds);
     }

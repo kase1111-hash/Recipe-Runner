@@ -7,8 +7,6 @@ import type { Cookbook } from '../../types';
 
 interface CookbookLibraryProps {
   onSelectCookbook: (cookbook: Cookbook) => void;
-  onOpenMealPlanner?: () => void;
-  onOpenInventory?: () => void;
   onOpenBookshelf?: () => void;
 }
 
@@ -21,7 +19,7 @@ const categoryIcons: Record<string, string> = {
   craft: '🛠️',
 };
 
-export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInventory, onOpenBookshelf }: CookbookLibraryProps) {
+export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookLibraryProps) {
   const [cookbooks, setCookbooks] = useState<Cookbook[]>([]);
   const [loading, setLoading] = useState(true);
   const [showVisualSettings, setShowVisualSettings] = useState(false);
@@ -82,16 +80,6 @@ export function CookbookLibrary({ onSelectCookbook, onOpenMealPlanner, onOpenInv
           {onOpenBookshelf && (
             <Button variant="ghost" onClick={onOpenBookshelf} title="Organize Cookbooks">
               📚 Bookshelf
-            </Button>
-          )}
-          {onOpenInventory && (
-            <Button variant="secondary" onClick={onOpenInventory}>
-              Inventory
-            </Button>
-          )}
-          {onOpenMealPlanner && (
-            <Button variant="primary" onClick={onOpenMealPlanner}>
-              Meal Planner
             </Button>
           )}
           <Button variant="secondary">+ New Cookbook</Button>
