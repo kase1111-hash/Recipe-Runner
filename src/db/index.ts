@@ -301,12 +301,12 @@ export async function getRecipesPaginated(
 ): Promise<{ recipes: Recipe[]; total: number }> {
   const { offset = 0, limit = 50, courseType, sortBy = 'name', sortDirection = 'asc' } = options;
 
-  let collection = courseType
+  const collection = courseType
     ? db.recipes.where('[cookbook_id+course_type]').equals([cookbookId, courseType])
     : db.recipes.where('cookbook_id').equals(cookbookId);
 
   const total = await collection.count();
-  let recipes = await collection.toArray();
+  const recipes = await collection.toArray();
 
   // Apply sorting
   recipes.sort((a, b) => {

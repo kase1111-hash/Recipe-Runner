@@ -8,6 +8,7 @@ import { StepExecutor } from './components/step/StepExecutor';
 import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
 import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
+import { useRouter } from './hooks/useRouter';
 import { initializeDatabase, getRecipe } from './db';
 import { seedSampleData } from './data/sampleCookbook';
 import type { Cookbook, Recipe, Ingredient } from './types';
@@ -39,6 +40,7 @@ interface AppState {
   checkedIngredients: string[];
   showChefOllama: boolean;
   chefInitialMessage: string | undefined;
+  chefStepIndex: number;
   refreshKey: number;
   showScaler: boolean;
 }
@@ -55,7 +57,7 @@ type AppAction =
   | { type: 'SET_PARSED_RECIPE'; parsedRecipe: ParsedRecipe | null }
   | { type: 'SAVE_RECIPE' }
   | { type: 'SET_CHECKED_INGREDIENTS'; ingredients: string[] }
-  | { type: 'OPEN_CHEF'; initialMessage?: string }
+  | { type: 'OPEN_CHEF'; initialMessage?: string; stepIndex?: number }
   | { type: 'CLOSE_CHEF' }
   | { type: 'OPEN_SCALER' }
   | { type: 'APPLY_SCALING'; recipe: Recipe }
@@ -77,6 +79,7 @@ const initialState: AppState = {
   checkedIngredients: [],
   showChefOllama: false,
   chefInitialMessage: undefined,
+  chefStepIndex: 0,
   refreshKey: 0,
   showScaler: false,
 };
@@ -126,6 +129,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         showChefOllama: true,
         chefInitialMessage: action.initialMessage,
+        chefStepIndex: action.stepIndex ?? 0,
       };
 
     case 'CLOSE_CHEF':
@@ -179,6 +183,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
 function App() {
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  // Sync browser URL with app state for back-button and deep-linking
+  useRouter(
+    { view: state.view, selectedCookbook: state.selectedCookbook, selectedRecipe: state.selectedRecipe },
+    dispatch,
+  );
 
   // Initialize database and seed sample data
   useEffect(() => {
@@ -268,8 +278,8 @@ function App() {
     });
   }, []);
 
-  const handleOpenChef = useCallback(() => {
-    dispatch({ type: 'OPEN_CHEF' });
+  const handleOpenChef = useCallback((stepIndex?: number) => {
+    dispatch({ type: 'OPEN_CHEF', stepIndex });
   }, []);
 
   const handleCloseChef = useCallback(() => {
@@ -439,7 +449,7 @@ function App() {
           {state.showChefOllama && state.selectedRecipe && (
             <ChefOllamaChat
               recipe={state.selectedRecipe}
-              currentStepIndex={0}
+              currentStepIndex={state.chefStepIndex}
               checkedIngredients={state.checkedIngredients}
               initialMessage={state.chefInitialMessage}
               onClose={handleCloseChef}

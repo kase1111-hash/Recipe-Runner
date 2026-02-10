@@ -51,6 +51,7 @@ export function ChefOllamaChat({
     if (initialMessage) {
       sendMessage(initialMessage);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMessage]);
 
   // Auto-scroll to bottom
@@ -91,7 +92,7 @@ export function ChefOllamaChat({
         actions: result.suggestedActions,
       };
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
@@ -123,7 +124,7 @@ export function ChefOllamaChat({
         actions: result.suggestedActions,
       };
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: 'Sorry, I encountered an error.' },

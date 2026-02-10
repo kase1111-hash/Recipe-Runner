@@ -6,7 +6,7 @@ interface StepExecutorProps {
   recipe: Recipe;
   checkedIngredients: string[];
   onComplete: () => void;
-  onOpenChef: () => void;
+  onOpenChef: (stepIndex?: number) => void;
   onBack: () => void;
 }
 
@@ -84,7 +84,7 @@ export function StepExecutor({
             </div>
             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{recipe.name}</div>
           </div>
-          <Button variant="ghost" onClick={onOpenChef}>
+          <Button variant="ghost" onClick={() => onOpenChef(currentStepIndex)}>
             👨‍🍳 Help
           </Button>
         </div>
