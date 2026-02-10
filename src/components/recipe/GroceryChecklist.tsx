@@ -2,6 +2,68 @@ import { useState } from 'react';
 import { Card, Button, ProgressBar } from '../common';
 import type { Recipe, Ingredient } from '../../types';
 
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  Produce: [
+    'onion', 'garlic', 'tomato', 'lettuce', 'pepper', 'carrot', 'celery',
+    'potato', 'mushroom', 'herb', 'basil', 'cilantro', 'parsley', 'lemon',
+    'lime', 'avocado', 'spinach', 'kale', 'broccoli', 'cucumber', 'zucchini',
+    'ginger',
+  ],
+  Proteins: [
+    'chicken', 'beef', 'pork', 'fish', 'salmon', 'shrimp', 'turkey', 'lamb',
+    'tofu', 'tempeh', 'sausage', 'bacon', 'steak', 'ground',
+  ],
+  Dairy: [
+    'milk', 'cream', 'cheese', 'butter', 'yogurt', 'egg', 'sour cream',
+    'parmesan', 'mozzarella', 'cheddar', 'ricotta',
+  ],
+  Pantry: [
+    'flour', 'sugar', 'salt', 'oil', 'vinegar', 'soy sauce', 'pasta', 'rice',
+    'bread', 'stock', 'broth', 'canned', 'tomato paste', 'honey', 'maple',
+    'vanilla', 'baking',
+  ],
+  Spices: [
+    'pepper', 'cumin', 'paprika', 'cinnamon', 'oregano', 'thyme', 'rosemary',
+    'chili', 'cayenne', 'nutmeg', 'turmeric', 'coriander', 'bay leaf', 'clove',
+  ],
+};
+
+function categorizeIngredient(ingredient: Ingredient): string {
+  const text = `${ingredient.item} ${ingredient.prep ?? ''}`.toLowerCase();
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some((kw) => text.includes(kw))) {
+      return category;
+    }
+  }
+  return 'Other';
+}
+
+function formatShoppingList(recipe: Recipe): string {
+  const grouped: Record<string, Ingredient[]> = {};
+  for (const ing of recipe.ingredients) {
+    const cat = categorizeIngredient(ing);
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(ing);
+  }
+
+  const categoryOrder = ['Produce', 'Proteins', 'Dairy', 'Pantry', 'Spices', 'Other'];
+  const lines: string[] = [`Shopping List: ${recipe.name} (${recipe.yield})\n`];
+
+  for (const cat of categoryOrder) {
+    const items = grouped[cat];
+    if (!items || items.length === 0) continue;
+    lines.push(`${cat.toUpperCase()}`);
+    for (const ing of items) {
+      const amount = [ing.amount, ing.unit].filter(Boolean).join(' ');
+      const prep = ing.prep ? `, ${ing.prep}` : '';
+      lines.push(`[ ] ${amount} ${ing.item}${prep}`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n').trimEnd();
+}
+
 interface GroceryChecklistProps {
   recipe: Recipe;
   onComplete: (checkedIngredients: string[]) => void;
@@ -18,6 +80,7 @@ export function GroceryChecklist({
   onOpenScaler,
 }: GroceryChecklistProps) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [copied, setCopied] = useState(false);
 
   const allChecked = checked.size === recipe.ingredients.length;
 
@@ -74,6 +137,35 @@ export function GroceryChecklist({
               <Button variant="secondary" size="sm" onClick={onOpenScaler}>
                 ⚖️ Scale Recipe
               </Button>
+            )}
+            {recipe.ingredients.length > 0 && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const text = formatShoppingList(recipe);
+                    navigator.clipboard.writeText(text).then(() => {
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    });
+                  }}
+                >
+                  {copied ? 'Copied!' : 'Export List'}
+                </Button>
+                {typeof navigator !== 'undefined' && navigator.share && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      const text = formatShoppingList(recipe);
+                      navigator.share({ title: `Shopping List: ${recipe.name}`, text });
+                    }}
+                  >
+                    Share
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </div>

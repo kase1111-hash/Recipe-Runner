@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Button, Timer, ProgressBar } from '../common';
+import { saveCookingSession, deleteCookingSession } from '../../db';
 import type { Recipe } from '../../types';
 
 interface StepExecutorProps {
@@ -8,19 +9,37 @@ interface StepExecutorProps {
   onComplete: () => void;
   onOpenChef: (stepIndex?: number) => void;
   onBack: () => void;
+  initialStepIndex?: number;
 }
 
 export function StepExecutor({
   recipe,
+  checkedIngredients,
   onComplete,
   onOpenChef,
   onBack,
+  initialStepIndex = 0,
 }: StepExecutorProps) {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState(initialStepIndex);
 
   const currentStep = recipe.steps[currentStepIndex];
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === recipe.steps.length - 1;
+
+  // Save cooking session on every step change
+  useEffect(() => {
+    saveCookingSession({
+      recipeId: recipe.id,
+      cookbookId: recipe.cookbook_id,
+      currentStepIndex,
+      checkedIngredients,
+      activeTimers: [],
+      startedAt: new Date().toISOString(),
+      notes: '',
+    }).catch(() => {
+      // Session save is best-effort
+    });
+  }, [currentStepIndex, recipe.id, recipe.cookbook_id, checkedIngredients]);
 
   // Guard against empty steps array
   if (!currentStep) {
@@ -34,6 +53,7 @@ export function StepExecutor({
 
   function goToNextStep() {
     if (isLastStep) {
+      deleteCookingSession(recipe.id).catch(() => {});
       onComplete();
     } else {
       setCurrentStepIndex((prev) => prev + 1);

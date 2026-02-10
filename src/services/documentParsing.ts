@@ -1,46 +1,53 @@
 // Document Parsing Service
 // Phase 9 Feature - PDF and Image/OCR Import Support
 
-import * as pdfjsLib from 'pdfjs-dist';
-import Tesseract from 'tesseract.js';
+// Lazy-loaded module caches
+let pdfjsModule: typeof import('pdfjs-dist') | null = null;
+let tesseractModule: typeof import('tesseract.js') | null = null;
 
-// Configure PDF.js worker with fallback options
-// Try multiple sources for reliability
-const PDF_WORKER_SOURCES = [
-  // Local worker (if bundled via Vite)
-  new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href,
-  // jsDelivr CDN (more reliable than cdnjs)
-  `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`,
-  // Unpkg CDN fallback
-  `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`,
-  // cdnjs fallback (legacy)
-  `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`,
-];
+async function ensurePdfJs(): Promise<typeof import('pdfjs-dist')> {
+  if (pdfjsModule) {
+    return pdfjsModule;
+  }
 
-// Try to set up the worker with the first available source
-async function initPdfWorker(): Promise<void> {
-  for (const src of PDF_WORKER_SOURCES) {
+  const mod = await import('pdfjs-dist');
+  pdfjsModule = mod;
+
+  // Configure the worker using CDN sources with fallback
+  const version = mod.version;
+  const workerSources = [
+    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.mjs`,
+    `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`,
+    `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`,
+  ];
+
+  for (const src of workerSources) {
     try {
-      // Test if the worker URL is accessible
       const response = await fetch(src, { method: 'HEAD', mode: 'cors' });
       if (response.ok) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = src;
-        return;
+        mod.GlobalWorkerOptions.workerSrc = src;
+        return mod;
       }
     } catch {
       // Try next source
       continue;
     }
   }
+
   // Fallback to first source even if we couldn't verify
-  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SOURCES[0];
+  mod.GlobalWorkerOptions.workerSrc = workerSources[0];
+  return mod;
 }
 
-// Initialize worker on module load (non-blocking)
-let workerInitialized = false;
-const workerPromise = initPdfWorker().then(() => {
-  workerInitialized = true;
-});
+async function ensureTesseract(): Promise<typeof import('tesseract.js')> {
+  if (tesseractModule) {
+    return tesseractModule;
+  }
+
+  const mod = await import('tesseract.js');
+  tesseractModule = mod;
+  return mod;
+}
 
 // ============================================
 // Types
@@ -75,10 +82,7 @@ export async function extractTextFromPDF(
     progress: 5,
   });
 
-  // Ensure PDF worker is initialized
-  if (!workerInitialized) {
-    await workerPromise;
-  }
+  const pdfjsLib = await ensurePdfJs();
 
   try {
     // Read file as ArrayBuffer
@@ -186,9 +190,11 @@ export async function extractTextFromImage(
       progress: 10,
     });
 
+    const Tesseract = await ensureTesseract();
+
     // Perform OCR using Tesseract.js
     const result = await Tesseract.recognize(imageUrl, 'eng', {
-      logger: (info) => {
+      logger: (info: { status: string; progress: number }) => {
         if (info.status === 'recognizing text') {
           const progressPercent = 10 + Math.round(info.progress * 85);
           onProgress?.({

@@ -426,6 +426,10 @@ export async function deleteCookingSession(recipeId: string): Promise<void> {
   await db.cookingSessions.delete(recipeId);
 }
 
+export async function getActiveCookingSession(): Promise<CookingSession | undefined> {
+  return await db.cookingSessions.orderBy('startedAt').reverse().first();
+}
+
 // ============================================
 // Image Cache Operations
 // ============================================

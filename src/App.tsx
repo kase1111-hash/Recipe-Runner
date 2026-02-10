@@ -9,9 +9,9 @@ import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
 import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
 import { useRouter } from './hooks/useRouter';
-import { initializeDatabase, getRecipe } from './db';
+import { initializeDatabase, getRecipe, getCookbook, getActiveCookingSession, deleteCookingSession } from './db';
 import { seedSampleData } from './data/sampleCookbook';
-import type { Cookbook, Recipe, Ingredient } from './types';
+import type { Cookbook, Recipe, Ingredient, CookingSession } from './types';
 import type { ParsedRecipe } from './services/recipeParser';
 import type { ScaledRecipe } from './services/recipeScaling';
 
@@ -43,6 +43,8 @@ interface AppState {
   chefStepIndex: number;
   refreshKey: number;
   showScaler: boolean;
+  resumeSession: CookingSession | null;
+  resumeStepIndex: number;
 }
 
 // ============================================
@@ -64,7 +66,9 @@ type AppAction =
   | { type: 'CLOSE_SCALER' }
   | { type: 'BACK_TO_LIBRARY' }
   | { type: 'BACK_TO_COOKBOOK' }
-  | { type: 'UPDATE_RECIPE'; recipe: Recipe };
+  | { type: 'UPDATE_RECIPE'; recipe: Recipe }
+  | { type: 'SET_RESUME_SESSION'; session: CookingSession | null }
+  | { type: 'RESUME_COOKING'; recipe: Recipe; cookbook: Cookbook; stepIndex: number; checkedIngredients: string[] };
 
 // ============================================
 // Initial State
@@ -82,6 +86,8 @@ const initialState: AppState = {
   chefStepIndex: 0,
   refreshKey: 0,
   showScaler: false,
+  resumeSession: null,
+  resumeStepIndex: 0,
 };
 
 // ============================================
@@ -94,7 +100,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, initialized: true };
 
     case 'NAVIGATE':
-      return { ...state, view: action.view };
+      return {
+        ...state,
+        view: action.view,
+        // Reset resume step when entering cooking normally (not via RESUME_COOKING)
+        ...(action.view === 'cooking' ? { resumeStepIndex: 0 } : {}),
+      };
 
     case 'SELECT_COOKBOOK':
       return { ...state, selectedCookbook: action.cookbook, view: 'cookbook' };
@@ -172,6 +183,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'UPDATE_RECIPE':
       return { ...state, selectedRecipe: action.recipe };
 
+    case 'SET_RESUME_SESSION':
+      return { ...state, resumeSession: action.session };
+
+    case 'RESUME_COOKING':
+      return {
+        ...state,
+        selectedCookbook: action.cookbook,
+        selectedRecipe: action.recipe,
+        checkedIngredients: action.checkedIngredients,
+        resumeStepIndex: action.stepIndex,
+        resumeSession: null,
+        view: 'cooking',
+      };
+
     default:
       return state;
   }
@@ -190,12 +215,21 @@ function App() {
     dispatch,
   );
 
-  // Initialize database and seed sample data
+  // Initialize database, seed sample data, and check for interrupted sessions
   useEffect(() => {
     async function init() {
       await initializeDatabase();
       await seedSampleData();
       dispatch({ type: 'INITIALIZE' });
+      // Check for interrupted cooking sessions
+      try {
+        const session = await getActiveCookingSession();
+        if (session) {
+          dispatch({ type: 'SET_RESUME_SESSION', session });
+        }
+      } catch {
+        // Session check is best-effort
+      }
     }
     init();
   }, []);
@@ -318,6 +352,38 @@ function App() {
     dispatch({ type: 'SELECT_COOKBOOK', cookbook });
   }, []);
 
+  const handleResumeCooking = useCallback(async () => {
+    if (!state.resumeSession) return;
+    const session = state.resumeSession;
+    try {
+      const [recipe, cookbook] = await Promise.all([
+        getRecipe(session.recipeId),
+        getCookbook(session.cookbookId),
+      ]);
+      if (recipe && cookbook) {
+        dispatch({
+          type: 'RESUME_COOKING',
+          recipe,
+          cookbook,
+          stepIndex: session.currentStepIndex,
+          checkedIngredients: session.checkedIngredients,
+        });
+      } else {
+        await deleteCookingSession(session.recipeId);
+        dispatch({ type: 'SET_RESUME_SESSION', session: null });
+      }
+    } catch {
+      dispatch({ type: 'SET_RESUME_SESSION', session: null });
+    }
+  }, [state.resumeSession]);
+
+  const handleDismissResume = useCallback(async () => {
+    if (state.resumeSession) {
+      await deleteCookingSession(state.resumeSession.recipeId).catch(() => {});
+    }
+    dispatch({ type: 'SET_RESUME_SESSION', session: null });
+  }, [state.resumeSession]);
+
   // ============================================
   // Loading State
   // ============================================
@@ -351,6 +417,64 @@ function App() {
     <ThemeProvider>
       <KeyboardShortcutsProvider>
         <div style={{ minHeight: '100vh', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          {/* Resume Interrupted Cook Banner */}
+          {state.resumeSession && state.view === 'library' && (
+            <div
+              style={{
+                background: 'var(--accent-light)',
+                border: '1px solid var(--accent-primary)',
+                borderRadius: '0.75rem',
+                padding: '1rem 1.5rem',
+                margin: '1rem 2rem 0',
+                maxWidth: '1200px',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Resume Cooking?
+                </div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
+                  You have an unfinished cooking session (step {state.resumeSession.currentStepIndex + 1})
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                <button
+                  onClick={handleResumeCooking}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: 'var(--accent-primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                  }}
+                >
+                  Resume
+                </button>
+                <button
+                  onClick={handleDismissResume}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: 'transparent',
+                    color: 'var(--text-tertiary)',
+                    border: '1px solid var(--border-secondary)',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
           {state.view === 'library' && (
             <CookbookLibrary
               onSelectCookbook={handleSelectCookbook}
@@ -425,6 +549,7 @@ function App() {
               onComplete={handleCookingComplete}
               onOpenChef={handleOpenChef}
               onBack={handleBackToGroceries}
+              initialStepIndex={state.resumeStepIndex}
             />
           )}
 
