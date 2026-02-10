@@ -6,6 +6,8 @@ interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  onReset?: () => void;
+  resetLabel?: string;
 }
 
 interface ErrorBoundaryState {
@@ -30,6 +32,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   handleReset = (): void => {
     this.setState({ hasError: false, error: null });
+    this.props.onReset?.();
   };
 
   handleReload = (): void => {
@@ -108,7 +111,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             )}
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <Button variant="secondary" onClick={this.handleReset}>
-                Try Again
+                {this.props.resetLabel || 'Try Again'}
               </Button>
               <Button variant="primary" onClick={this.handleReload}>
                 Reload Page

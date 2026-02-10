@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback } from 'react';
+import { useReducer, useEffect, useCallback, useState } from 'react';
 import { ThemeProvider, KeyboardShortcutsProvider } from './contexts';
 import { CookbookLibrary } from './components/cookbook/CookbookLibrary';
 import { BookshelfView } from './components/cookbook/BookshelfView';
@@ -6,6 +6,7 @@ import { RecipeList, RecipeScaler, MiseEnPlace, CookCompletion, RecipeDetail } f
 import { GroceryChecklist } from './components/recipe/GroceryChecklist';
 import { StepExecutor } from './components/step/StepExecutor';
 import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
+import { ErrorBoundary } from './components/common';
 import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
 import { useRouter } from './hooks/useRouter';
@@ -234,6 +235,19 @@ function App() {
     init();
   }, []);
 
+  // Track online/offline status
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const goOffline = () => setIsOffline(true);
+    const goOnline = () => setIsOffline(false);
+    window.addEventListener('offline', goOffline);
+    window.addEventListener('online', goOnline);
+    return () => {
+      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('online', goOnline);
+    };
+  }, []);
+
   // ============================================
   // Event Handlers
   // ============================================
@@ -417,6 +431,22 @@ function App() {
     <ThemeProvider>
       <KeyboardShortcutsProvider>
         <div style={{ minHeight: '100vh', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          {/* Offline Indicator */}
+          {isOffline && (
+            <div
+              style={{
+                background: 'var(--warning-bg)',
+                borderBottom: '1px solid var(--warning-border)',
+                padding: '0.5rem 2rem',
+                textAlign: 'center',
+                fontSize: '0.875rem',
+                color: 'var(--warning-text)',
+              }}
+            >
+              You're offline. Recipes and cooking work normally — Chef Ollama requires a connection.
+            </div>
+          )}
+
           {/* Resume Interrupted Cook Banner */}
           {state.resumeSession && state.view === 'library' && (
             <div
@@ -476,109 +506,133 @@ function App() {
           )}
 
           {state.view === 'library' && (
-            <CookbookLibrary
-              onSelectCookbook={handleSelectCookbook}
-              onOpenBookshelf={handleOpenBookshelf}
-            />
+            <ErrorBoundary resetLabel="Reload Library" onReset={handleBackToLibrary}>
+              <CookbookLibrary
+                onSelectCookbook={handleSelectCookbook}
+                onOpenBookshelf={handleOpenBookshelf}
+              />
+            </ErrorBoundary>
           )}
 
           {state.view === 'bookshelf' && (
-            <BookshelfView
-              onSelectCookbook={handleSelectCookbookFromBookshelf}
-              onBack={handleBackFromBookshelf}
-            />
+            <ErrorBoundary resetLabel="Back to Library" onReset={handleBackToLibrary}>
+              <BookshelfView
+                onSelectCookbook={handleSelectCookbookFromBookshelf}
+                onBack={handleBackFromBookshelf}
+              />
+            </ErrorBoundary>
           )}
 
           {state.view === 'cookbook' && state.selectedCookbook && (
-            <RecipeList
-              key={state.refreshKey}
-              cookbook={state.selectedCookbook}
-              onSelectRecipe={handleSelectRecipe}
-              onAddRecipe={handleStartImport}
-              onBack={handleBackToLibrary}
-            />
+            <ErrorBoundary resetLabel="Back to Library" onReset={handleBackToLibrary}>
+              <RecipeList
+                key={state.refreshKey}
+                cookbook={state.selectedCookbook}
+                onSelectRecipe={handleSelectRecipe}
+                onAddRecipe={handleStartImport}
+                onBack={handleBackToLibrary}
+              />
+            </ErrorBoundary>
           )}
 
           {state.view === 'detail' && state.selectedRecipe && (
-            <RecipeDetail
-              recipe={state.selectedRecipe}
-              onStartCooking={handleStartCooking}
-              onBack={handleBackToCookbook}
-            />
+            <ErrorBoundary resetLabel="Back to Cookbook" onReset={handleBackToCookbook}>
+              <RecipeDetail
+                recipe={state.selectedRecipe}
+                onStartCooking={handleStartCooking}
+                onBack={handleBackToCookbook}
+              />
+            </ErrorBoundary>
           )}
 
           {state.view === 'import' && state.selectedCookbook && (
-            <RecipeImport
-              cookbook={state.selectedCookbook}
-              onImportComplete={handleImportComplete}
-              onCancel={handleCancelImport}
-            />
+            <ErrorBoundary resetLabel="Cancel Import" onReset={handleCancelImport}>
+              <RecipeImport
+                cookbook={state.selectedCookbook}
+                onImportComplete={handleImportComplete}
+                onCancel={handleCancelImport}
+              />
+            </ErrorBoundary>
           )}
 
           {state.view === 'edit' && state.selectedCookbook && state.parsedRecipe && (
-            <RecipeEditor
-              parsedRecipe={state.parsedRecipe}
-              cookbook={state.selectedCookbook}
-              onSave={handleSaveRecipe}
-              onCancel={handleCancelImport}
-            />
+            <ErrorBoundary resetLabel="Cancel Edit" onReset={handleCancelImport}>
+              <RecipeEditor
+                parsedRecipe={state.parsedRecipe}
+                cookbook={state.selectedCookbook}
+                onSave={handleSaveRecipe}
+                onCancel={handleCancelImport}
+              />
+            </ErrorBoundary>
           )}
 
           {state.view === 'groceries' && state.selectedRecipe && (
-            <GroceryChecklist
-              recipe={state.selectedRecipe}
-              onComplete={handleGroceriesComplete}
-              onBack={handleBackToDetail}
-              onOpenChef={handleOpenChefForIngredient}
-              onOpenScaler={handleOpenScaler}
-            />
+            <ErrorBoundary resetLabel="Back to Recipe" onReset={handleBackToDetail}>
+              <GroceryChecklist
+                recipe={state.selectedRecipe}
+                onComplete={handleGroceriesComplete}
+                onBack={handleBackToDetail}
+                onOpenChef={handleOpenChefForIngredient}
+                onOpenScaler={handleOpenScaler}
+              />
+            </ErrorBoundary>
           )}
 
           {state.view === 'miseenplace' && state.selectedRecipe && (
-            <MiseEnPlace
-              recipe={state.selectedRecipe}
-              onComplete={handleMiseEnPlaceComplete}
-              onBack={handleBackFromMiseEnPlace}
-            />
+            <ErrorBoundary resetLabel="Back to Groceries" onReset={handleBackToGroceries}>
+              <MiseEnPlace
+                recipe={state.selectedRecipe}
+                onComplete={handleMiseEnPlaceComplete}
+                onBack={handleBackFromMiseEnPlace}
+              />
+            </ErrorBoundary>
           )}
 
           {state.view === 'cooking' && state.selectedRecipe && (
-            <StepExecutor
-              recipe={state.selectedRecipe}
-              checkedIngredients={state.checkedIngredients}
-              onComplete={handleCookingComplete}
-              onOpenChef={handleOpenChef}
-              onBack={handleBackToGroceries}
-              initialStepIndex={state.resumeStepIndex}
-            />
+            <ErrorBoundary resetLabel="Back to Recipe" onReset={handleBackToDetail}>
+              <StepExecutor
+                recipe={state.selectedRecipe}
+                checkedIngredients={state.checkedIngredients}
+                onComplete={handleCookingComplete}
+                onOpenChef={handleOpenChef}
+                onBack={handleBackToGroceries}
+                initialStepIndex={state.resumeStepIndex}
+              />
+            </ErrorBoundary>
           )}
 
           {state.view === 'complete' && state.selectedRecipe && (
-            <CookCompletion
-              recipe={state.selectedRecipe}
-              onComplete={handleCompletionFinished}
-              onCookAgain={handleCookAgain}
-            />
+            <ErrorBoundary resetLabel="Back to Library" onReset={handleBackToLibrary}>
+              <CookCompletion
+                recipe={state.selectedRecipe}
+                onComplete={handleCompletionFinished}
+                onCookAgain={handleCookAgain}
+              />
+            </ErrorBoundary>
           )}
 
           {/* Recipe Scaler Modal */}
           {state.showScaler && state.selectedRecipe && (
-            <RecipeScaler
-              recipe={state.selectedRecipe}
-              onApply={handleApplyScaling}
-              onCancel={handleCancelScaling}
-            />
+            <ErrorBoundary resetLabel="Close Scaler" onReset={handleCancelScaling}>
+              <RecipeScaler
+                recipe={state.selectedRecipe}
+                onApply={handleApplyScaling}
+                onCancel={handleCancelScaling}
+              />
+            </ErrorBoundary>
           )}
 
           {/* Chef Ollama Overlay */}
           {state.showChefOllama && state.selectedRecipe && (
-            <ChefOllamaChat
-              recipe={state.selectedRecipe}
-              currentStepIndex={state.chefStepIndex}
-              checkedIngredients={state.checkedIngredients}
-              initialMessage={state.chefInitialMessage}
-              onClose={handleCloseChef}
-            />
+            <ErrorBoundary resetLabel="Close Chef" onReset={handleCloseChef}>
+              <ChefOllamaChat
+                recipe={state.selectedRecipe}
+                currentStepIndex={state.chefStepIndex}
+                checkedIngredients={state.checkedIngredients}
+                initialMessage={state.chefInitialMessage}
+                onClose={handleCloseChef}
+              />
+            </ErrorBoundary>
           )}
         </div>
       </KeyboardShortcutsProvider>

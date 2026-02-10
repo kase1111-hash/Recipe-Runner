@@ -41,8 +41,26 @@ export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookL
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
-        Loading cookbooks...
+      <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ width: '200px', height: '2rem', background: 'var(--border-primary)', borderRadius: '0.5rem', marginBottom: '0.5rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ width: '250px', height: '1rem', background: 'var(--border-primary)', borderRadius: '0.25rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ width: '4rem', height: '4rem', borderRadius: '0.75rem', background: 'var(--border-primary)', flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ width: '70%', height: '1.125rem', background: 'var(--border-primary)', borderRadius: '0.25rem', marginBottom: '0.5rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  <div style={{ width: '100%', height: '0.875rem', background: 'var(--border-primary)', borderRadius: '0.25rem', marginBottom: '0.25rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  <div style={{ width: '60%', height: '0.875rem', background: 'var(--border-primary)', borderRadius: '0.25rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+        <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
       </div>
     );
   }
