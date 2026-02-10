@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Button, Timer, ProgressBar } from '../common';
 import { saveCookingSession, deleteCookingSession } from '../../db';
 import type { Recipe } from '../../types';
@@ -40,6 +40,30 @@ export function StepExecutor({
       // Session save is best-effort
     });
   }, [currentStepIndex, recipe.id, recipe.cookbook_id, checkedIngredients]);
+
+  // Swipe navigation for mobile
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+    // Only trigger swipe if horizontal movement > 60px and > vertical movement
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+    if (deltaX < 0 && !isLastStep) {
+      setCurrentStepIndex((prev) => prev + 1);
+    } else if (deltaX > 0 && !isFirstStep) {
+      setCurrentStepIndex((prev) => prev - 1);
+    }
+  }, [isFirstStep, isLastStep]);
 
   // Guard against empty steps array
   if (!currentStep) {
@@ -119,12 +143,15 @@ export function StepExecutor({
 
       {/* Main Content */}
       <main
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{
           flex: 1,
           padding: '2rem',
           maxWidth: '800px',
           margin: '0 auto',
           width: '100%',
+          touchAction: 'pan-y',
         }}
       >
         {/* Step Title */}
@@ -286,11 +313,12 @@ export function StepExecutor({
             variant="secondary"
             onClick={goToPreviousStep}
             disabled={isFirstStep}
+            style={{ minHeight: '44px', minWidth: '44px' }}
           >
             ← Previous
           </Button>
 
-          <Button onClick={goToNextStep} size="lg">
+          <Button onClick={goToNextStep} size="lg" style={{ minHeight: '44px' }}>
             {isLastStep ? '✓ Done' : 'Next →'}
           </Button>
         </div>

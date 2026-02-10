@@ -145,8 +145,26 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
-        Loading recipes...
+      <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ width: '120px', height: '1rem', background: 'var(--border-primary)', borderRadius: '0.25rem', marginBottom: '1rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ width: '250px', height: '1.75rem', background: 'var(--border-primary)', borderRadius: '0.5rem', marginBottom: '0.5rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ width: '180px', height: '1rem', background: 'var(--border-primary)', borderRadius: '0.25rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i}>
+              <div style={{ width: '80%', height: '1.125rem', background: 'var(--border-primary)', borderRadius: '0.25rem', marginBottom: '0.75rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <div style={{ width: '100%', height: '0.875rem', background: 'var(--border-primary)', borderRadius: '0.25rem', marginBottom: '0.25rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <div style={{ width: '50%', height: '0.875rem', background: 'var(--border-primary)', borderRadius: '0.25rem', marginBottom: '1rem', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ width: '4rem', height: '1.5rem', background: 'var(--border-primary)', borderRadius: '9999px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                <div style={{ width: '4rem', height: '1.5rem', background: 'var(--border-primary)', borderRadius: '9999px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              </div>
+            </Card>
+          ))}
+        </div>
+        <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
       </div>
     );
   }
