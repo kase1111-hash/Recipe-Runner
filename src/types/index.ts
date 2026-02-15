@@ -290,6 +290,7 @@ export interface UserPreferences {
   timer_alert_type: 'sound' | 'vibrate' | 'both';
   skill_level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
   dark_mode: boolean;
+  theme_mode?: 'light' | 'dark' | 'system';  // Persists the actual theme mode selection
   auto_generate_visuals: boolean;
 }
 

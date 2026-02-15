@@ -126,13 +126,13 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
           style={{
             fontSize: '1.75rem',
             fontWeight: 700,
-            color: '#111827',
+            color: 'var(--text-primary)',
             margin: '0 0 0.5rem',
           }}
         >
           Mise en Place
         </h1>
-        <p style={{ color: '#6b7280', margin: 0 }}>
+        <p style={{ color: 'var(--text-tertiary)', margin: 0 }}>
           "Everything in its place" - Gather and prep your ingredients before cooking
         </p>
       </header>
@@ -146,15 +146,15 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
             marginBottom: '0.5rem',
           }}
         >
-          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
             Preparation Progress
           </span>
-          <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{progress}%</span>
+          <span style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>{progress}%</span>
         </div>
         <div
           style={{
             height: '0.5rem',
-            background: '#e5e7eb',
+            background: 'var(--progress-track)',
             borderRadius: '9999px',
             overflow: 'hidden',
           }}
@@ -163,7 +163,7 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
             style={{
               height: '100%',
               width: `${progress}%`,
-              background: progress === 100 ? '#22c55e' : '#2563eb',
+              background: progress === 100 ? 'var(--success)' : 'var(--accent-primary)',
               borderRadius: '9999px',
               transition: 'width 0.3s ease',
             }}
@@ -173,10 +173,10 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
 
       {/* Recipe Info */}
       <Card style={{ marginBottom: '1.5rem', padding: '1rem' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#111827', margin: '0 0 0.5rem' }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>
           {recipe.name}
         </h2>
-        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
           <span>🍽 {recipe.yield}</span>
           <span>⏱ {recipe.total_time}</span>
           <span>📋 {recipe.ingredients.length} ingredients</span>
@@ -190,7 +190,7 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
             style={{
               fontSize: '0.875rem',
               fontWeight: 600,
-              color: '#374151',
+              color: 'var(--text-secondary)',
               margin: '0 0 0.75rem',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -204,10 +204,10 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
                 key={idx}
                 style={{
                   padding: '0.25rem 0.75rem',
-                  background: '#f3f4f6',
+                  background: 'var(--bg-tertiary)',
                   borderRadius: '9999px',
                   fontSize: '0.875rem',
-                  color: '#374151',
+                  color: 'var(--text-secondary)',
                 }}
               >
                 {eq}
@@ -228,7 +228,7 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
               style={{
                 fontSize: '0.875rem',
                 fontWeight: 600,
-                color: '#374151',
+                color: 'var(--text-secondary)',
                 margin: '0 0 0.75rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -237,7 +237,7 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
             >
               <span>{icon}</span>
               {label}
-              <span style={{ color: '#9ca3af', fontWeight: 400 }}>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
                 ({items.filter(i => i.gathered && i.prepped).length}/{items.length})
               </span>
             </h3>
@@ -251,24 +251,24 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '0.75rem',
-                    background: item.gathered && item.prepped ? '#f0fdf4' : '#f9fafb',
+                    background: item.gathered && item.prepped ? 'var(--success-bg)' : 'var(--bg-secondary)',
                     borderRadius: '0.5rem',
-                    border: `1px solid ${item.gathered && item.prepped ? '#bbf7d0' : '#e5e7eb'}`,
+                    border: `1px solid ${item.gathered && item.prepped ? 'var(--success-border)' : 'var(--border-primary)'}`,
                   }}
                 >
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontWeight: 600, color: '#374151' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
                         {item.amount} {item.unit}
                       </span>
-                      <span style={{ color: '#374151' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>
                         {item.substitution || item.item}
                       </span>
                       {item.substitution && (
                         <span
                           style={{
                             fontSize: '0.75rem',
-                            color: '#6b7280',
+                            color: 'var(--text-tertiary)',
                             textDecoration: 'line-through',
                           }}
                         >
@@ -277,7 +277,7 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
                       )}
                     </div>
                     {item.prep && (
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
                         Prep: {item.prep}
                       </div>
                     )}
@@ -310,9 +310,9 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
                         width: '2rem',
                         height: '2rem',
                         borderRadius: '0.375rem',
-                        border: `2px solid ${item.gathered ? '#22c55e' : '#d1d5db'}`,
-                        background: item.gathered ? '#22c55e' : 'white',
-                        color: 'white',
+                        border: `2px solid ${item.gathered ? 'var(--success)' : 'var(--border-secondary)'}`,
+                        background: item.gathered ? 'var(--success)' : 'var(--card-bg)',
+                        color: 'var(--card-bg)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -332,9 +332,9 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
                           width: '2rem',
                           height: '2rem',
                           borderRadius: '0.375rem',
-                          border: `2px solid ${item.prepped ? '#22c55e' : '#d1d5db'}`,
-                          background: item.prepped ? '#22c55e' : 'white',
-                          color: 'white',
+                          border: `2px solid ${item.prepped ? 'var(--success)' : 'var(--border-secondary)'}`,
+                          background: item.prepped ? 'var(--success)' : 'var(--card-bg)',
+                          color: 'var(--card-bg)',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -365,7 +365,7 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
             <Button variant="secondary" onClick={onComplete} style={{ minWidth: '200px' }}>
               Skip to Cooking
             </Button>
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
               {prepItems.filter(i => !i.gathered).length} items still to gather,{' '}
               {prepItems.filter(i => !i.prepped && i.prep).length} items still to prep
             </p>
@@ -402,10 +402,10 @@ function SubstitutionDropdown({ ingredient, onSelect, onClose }: SubstitutionDro
         right: 0,
         zIndex: 100,
         minWidth: '250px',
-        background: 'white',
+        background: 'var(--card-bg)',
         borderRadius: '0.5rem',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        border: '1px solid #e5e7eb',
+        boxShadow: 'var(--card-shadow-lg)',
+        border: '1px solid var(--border-primary)',
         padding: '0.5rem',
       }}
     >
@@ -416,10 +416,10 @@ function SubstitutionDropdown({ ingredient, onSelect, onClose }: SubstitutionDro
           alignItems: 'center',
           marginBottom: '0.5rem',
           paddingBottom: '0.5rem',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--border-primary)',
         }}
       >
-        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
           Substitutes for {ingredient}
         </span>
         <button
@@ -428,7 +428,7 @@ function SubstitutionDropdown({ ingredient, onSelect, onClose }: SubstitutionDro
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            color: '#6b7280',
+            color: 'var(--text-tertiary)',
           }}
         >
           ×
@@ -451,13 +451,13 @@ function SubstitutionDropdown({ ingredient, onSelect, onClose }: SubstitutionDro
                 cursor: 'pointer',
                 borderRadius: '0.25rem',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f3f4f6')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
             >
-              <div style={{ fontWeight: 500, color: '#374151', fontSize: '0.875rem' }}>
+              <div style={{ fontWeight: 500, color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                 {sub.substitute}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                 {sub.ratio} • {sub.notes}
               </div>
               {sub.dietaryTags && sub.dietaryTags.length > 0 && (
@@ -468,8 +468,8 @@ function SubstitutionDropdown({ ingredient, onSelect, onClose }: SubstitutionDro
                       style={{
                         fontSize: '0.625rem',
                         padding: '0.125rem 0.375rem',
-                        background: '#dbeafe',
-                        color: '#1d4ed8',
+                        background: 'var(--info-bg)',
+                        color: 'var(--accent-primary)',
                         borderRadius: '9999px',
                       }}
                     >
@@ -482,7 +482,7 @@ function SubstitutionDropdown({ ingredient, onSelect, onClose }: SubstitutionDro
           ))}
         </div>
       ) : (
-        <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
+        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
           No substitutions found for this ingredient
         </div>
       )}

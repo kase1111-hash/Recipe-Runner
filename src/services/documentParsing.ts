@@ -138,10 +138,10 @@ export async function extractTextFromPDF(
     // Combine all pages
     const fullText = textParts.join('\n\n').trim();
 
-    // Clean up excessive whitespace
+    // Clean up excessive whitespace while preserving line structure
     const cleanedText = fullText
-      .replace(/\s+/g, ' ')
-      .replace(/\n\s*\n/g, '\n\n')
+      .replace(/[^\S\n]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
       .trim();
 
     onProgress?.({
@@ -268,17 +268,13 @@ function fileToDataUrl(file: File): Promise<string> {
 
 function cleanOCRText(text: string): string {
   return text
-    // Fix common OCR mistakes
-    .replace(/\|/g, 'I') // Pipe often misread as I
-    .replace(/0(?=[a-zA-Z])/g, 'O') // Zero before letters is often O
-    .replace(/l(?=\d)/g, '1') // lowercase L before numbers is often 1
-    // Clean up spacing
-    .replace(/\s+/g, ' ')
+    // Clean up spacing first (preserve newlines)
+    .replace(/[^\S\n]+/g, ' ')
     .replace(/\n\s*\n/g, '\n\n')
-    // Fix common recipe-related OCR issues
-    .replace(/tablespcon/gi, 'tablespoon')
-    .replace(/teaspcon/gi, 'teaspoon')
-    .replace(/oup/gi, 'cup')
+    // Fix common recipe-related OCR issues (whole-word only to avoid corrupting valid words)
+    .replace(/\btablespcon\b/gi, 'tablespoon')
+    .replace(/\bteaspcon\b/gi, 'teaspoon')
+    .replace(/\bc up\b/gi, 'cup')
     .trim();
 }
 

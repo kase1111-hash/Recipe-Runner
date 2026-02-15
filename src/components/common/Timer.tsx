@@ -58,6 +58,7 @@ export function Timer({
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
+  const remainingAtStartRef = useRef<number>(totalSeconds);
   // Timer alert sound
   const alertSound = useRef<Howl | null>(null);
 
@@ -130,6 +131,7 @@ export function Timer({
   useEffect(() => {
     if (state === 'running') {
       startTimeRef.current = Date.now();
+      remainingAtStartRef.current = remainingSeconds;
       intervalRef.current = window.setInterval(() => {
         setRemainingSeconds((prev) => {
           if (prev <= 1) {
@@ -158,9 +160,9 @@ export function Timer({
   useEffect(() => {
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible' && state === 'running' && startTimeRef.current) {
-        // Recalculate remaining time based on actual elapsed time
+        // Recalculate remaining time based on actual elapsed time since the timer interval started
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        const newRemaining = Math.max(0, totalSeconds - elapsed);
+        const newRemaining = Math.max(0, remainingAtStartRef.current - elapsed);
         setRemainingSeconds(newRemaining);
 
         if (newRemaining === 0) {
@@ -171,7 +173,7 @@ export function Timer({
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [state, totalSeconds, handleComplete]);
+  }, [state, handleComplete]);
 
   const start = () => {
     startTimeRef.current = Date.now();

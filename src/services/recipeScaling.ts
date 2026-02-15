@@ -122,9 +122,9 @@ export function scaleIngredient(
   for (const [key, config] of Object.entries(NON_LINEAR_INGREDIENTS)) {
     if (itemLower.includes(key)) {
       if (scaleFactor > config.maxScale) {
-        // Apply reduced scaling for these items
-        const reduction = config.maxScale / scaleFactor;
-        scaledValue = parsed.value * scaleFactor * reduction;
+        // Apply sub-linear scaling: scale linearly up to maxScale, then use sqrt for the excess
+        const excessFactor = scaleFactor / config.maxScale;
+        scaledValue = parsed.value * config.maxScale * Math.sqrt(excessFactor);
         warning = config.note;
       }
       break;

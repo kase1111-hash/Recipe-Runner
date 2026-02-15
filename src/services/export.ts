@@ -305,6 +305,28 @@ export async function exportCookbookAsMarkdown(
   return md;
 }
 
+async function exportCookbookAsText(
+  cookbook: Cookbook,
+): Promise<string> {
+  const recipes = await getRecipesByCookbook(cookbook.id);
+
+  let text = `${'='.repeat(50)}\n`;
+  text += `${cookbook.title.toUpperCase()}\n`;
+  text += `${'='.repeat(50)}\n\n`;
+  text += `${cookbook.description}\n`;
+  text += `Author: ${cookbook.author}\n`;
+  text += `Category: ${cookbook.category}\n`;
+  text += `Recipes: ${recipes.length}\n\n`;
+  text += `${'-'.repeat(50)}\n\n`;
+
+  for (const recipe of recipes) {
+    text += exportRecipeAsText(recipe);
+    text += `${'-'.repeat(50)}\n\n`;
+  }
+
+  return text;
+}
+
 export async function exportCookbook(
   cookbook: Cookbook,
   options: ExportOptions = { format: 'json' }
@@ -312,6 +334,8 @@ export async function exportCookbook(
   switch (options.format) {
     case 'markdown':
       return await exportCookbookAsMarkdown(cookbook, options);
+    case 'text':
+      return await exportCookbookAsText(cookbook);
     case 'json':
     default:
       return await exportCookbookAsJSON(cookbook, options);

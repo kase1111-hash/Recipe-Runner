@@ -308,8 +308,13 @@ export async function getRecipesPaginated(
   const total = await collection.count();
   const recipes = await collection.toArray();
 
-  // Apply sorting
+  // Apply sorting with favorites pinned first, then by the requested sort
   recipes.sort((a, b) => {
+    // Favorites always first
+    if (a.favorite && !b.favorite) return -1;
+    if (!a.favorite && b.favorite) return 1;
+
+    // Then apply the requested sort within each group
     let comparison = 0;
     switch (sortBy) {
       case 'name':
@@ -332,13 +337,6 @@ export async function getRecipesPaginated(
         break;
     }
     return sortDirection === 'desc' ? -comparison : comparison;
-  });
-
-  // Favorites always first
-  recipes.sort((a, b) => {
-    if (a.favorite && !b.favorite) return -1;
-    if (!a.favorite && b.favorite) return 1;
-    return 0;
   });
 
   // Apply pagination
@@ -624,7 +622,16 @@ export function getPreferences(): UserPreferences {
   try {
     const stored = localStorage.getItem(PREFERENCES_KEY);
     if (stored) {
-      return { ...defaultPreferences, ...JSON.parse(stored) };
+      const parsed = JSON.parse(stored);
+      return {
+        ...defaultPreferences,
+        ...parsed,
+        // Deep-merge nested objects to avoid losing fields on partial saves
+        ollama_config: {
+          ...defaultPreferences.ollama_config,
+          ...(parsed.ollama_config || {}),
+        },
+      };
     }
   } catch {
     // Ignore parse errors
@@ -634,10 +641,16 @@ export function getPreferences(): UserPreferences {
 
 export function savePreferences(preferences: Partial<UserPreferences>): void {
   const current = getPreferences();
-  localStorage.setItem(
-    PREFERENCES_KEY,
-    JSON.stringify({ ...current, ...preferences })
-  );
+  const merged: UserPreferences = {
+    ...current,
+    ...preferences,
+    // Deep-merge nested objects
+    ollama_config: {
+      ...current.ollama_config,
+      ...(preferences.ollama_config || {}),
+    },
+  };
+  localStorage.setItem(PREFERENCES_KEY, JSON.stringify(merged));
 }
 
 // ============================================
