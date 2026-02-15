@@ -113,8 +113,7 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
 
       // Add source information
       parsed.source = {
-        type: documentResult.source === 'image' ? 'original' : 'original',
-        // Could add more metadata here
+        type: documentResult.source === 'image' ? 'ocr' : 'pdf',
       };
 
       onImportComplete(parsed);
@@ -137,10 +136,10 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
         <Button variant="ghost" onClick={onCancel} style={{ marginBottom: '1rem' }}>
           ← Cancel
         </Button>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
           Import Recipe
         </h1>
-        <p style={{ color: '#6b7280', margin: '0.25rem 0 0' }}>
+        <p style={{ color: 'var(--text-tertiary)', margin: '0.25rem 0 0' }}>
           Add a new recipe to {cookbook.title}
         </p>
       </header>
@@ -159,15 +158,15 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
               style={{
                 flex: 1,
                 padding: '1rem',
-                border: `2px solid ${method === id ? '#2563eb' : '#e5e7eb'}`,
+                border: `2px solid ${method === id ? 'var(--accent-primary)' : 'var(--border-primary)'}`,
                 borderRadius: '0.5rem',
-                background: method === id ? '#eff6ff' : 'white',
+                background: method === id ? 'var(--accent-light)' : 'var(--card-bg)',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s',
               }}
             >
               <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{icon}</div>
-              <div style={{ fontWeight: 500, color: method === id ? '#2563eb' : '#374151' }}>
+              <div style={{ fontWeight: 500, color: method === id ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
                 {label}
               </div>
             </button>
@@ -184,7 +183,7 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
                 display: 'block',
                 marginBottom: '0.5rem',
                 fontWeight: 500,
-                color: '#374151',
+                color: 'var(--text-secondary)',
               }}
             >
               Recipe URL
@@ -198,13 +197,13 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--border-secondary)',
                 borderRadius: '0.5rem',
                 fontSize: '1rem',
                 marginBottom: '1rem',
               }}
             />
-            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
               Paste a URL from any recipe website. We'll extract the recipe data automatically.
             </p>
             <Button onClick={handleUrlImport} disabled={loading || !url.trim()}>
@@ -220,7 +219,7 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
                 display: 'block',
                 marginBottom: '0.5rem',
                 fontWeight: 500,
-                color: '#374151',
+                color: 'var(--text-secondary)',
               }}
             >
               Recipe Text
@@ -246,7 +245,7 @@ Instructions:
                 width: '100%',
                 minHeight: '300px',
                 padding: '0.75rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--border-secondary)',
                 borderRadius: '0.5rem',
                 fontSize: '1rem',
                 fontFamily: 'inherit',
@@ -254,7 +253,7 @@ Instructions:
                 marginBottom: '1rem',
               }}
             />
-            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
               Paste a complete recipe including ingredients and instructions.
             </p>
             <Button onClick={handleTextImport} disabled={loading || text.trim().length < 50}>
@@ -270,19 +269,19 @@ Instructions:
                 display: 'block',
                 marginBottom: '0.5rem',
                 fontWeight: 500,
-                color: '#374151',
+                color: 'var(--text-secondary)',
               }}
             >
               Upload Recipe File
             </label>
             <div
               style={{
-                border: `2px dashed ${selectedFile ? '#2563eb' : '#d1d5db'}`,
+                border: `2px dashed ${selectedFile ? 'var(--accent-primary)' : 'var(--border-secondary)'}`,
                 borderRadius: '0.5rem',
                 padding: '2rem',
                 textAlign: 'center',
                 marginBottom: '1rem',
-                background: selectedFile ? '#eff6ff' : 'white',
+                background: selectedFile ? 'var(--accent-light)' : 'var(--card-bg)',
               }}
             >
               <input
@@ -306,23 +305,23 @@ Instructions:
                       {selectedFile.type === 'application/pdf' ? '📄' :
                        selectedFile.type.startsWith('image/') ? '🖼️' : '📝'}
                     </div>
-                    <div style={{ fontWeight: 500, color: '#2563eb', marginBottom: '0.25rem' }}>
+                    <div style={{ fontWeight: 500, color: 'var(--accent-primary)', marginBottom: '0.25rem' }}>
                       {selectedFile.name}
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
                       {getFileTypeDescription(selectedFile)} • {(selectedFile.size / 1024).toFixed(1)} KB
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
                       Click to select a different file
                     </div>
                   </>
                 ) : (
                   <>
                     <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
-                    <div style={{ fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                    <div style={{ fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                       Click to upload or drag and drop
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
                       PDF, images (with OCR), or text files
                     </div>
                   </>
@@ -338,7 +337,7 @@ Instructions:
                 {loading ? 'Processing...' : `Import from ${getFileTypeDescription(selectedFile)}`}
               </Button>
             )}
-            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
               <strong>Supported formats:</strong> PDF documents, images (JPG, PNG - uses OCR), and text files.
               For best OCR results, use clear, well-lit photos of recipe pages.
             </p>
@@ -354,17 +353,17 @@ Instructions:
               style={{
                 width: '2rem',
                 height: '2rem',
-                border: '3px solid #e5e7eb',
-                borderTopColor: '#2563eb',
+                border: '3px solid var(--border-primary)',
+                borderTopColor: 'var(--accent-primary)',
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite',
               }}
             />
             <div>
-              <div style={{ fontWeight: 500, color: '#111827' }}>
+              <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
                 {documentProgress?.message || progress?.message}
               </div>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
                 {documentProgress ? (
                   documentProgress.currentPage && documentProgress.totalPages ? (
                     `Page ${documentProgress.currentPage} of ${documentProgress.totalPages} • ${documentProgress.progress}%`
@@ -379,7 +378,7 @@ Instructions:
           </div>
           {/* Two-phase progress for file imports */}
           {method === 'file' && (
-            <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#6b7280' }}>
+            <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
               {documentProgress ? 'Step 1 of 2: Extracting text' : 'Step 2 of 2: Parsing recipe'}
             </div>
           )}
@@ -387,7 +386,7 @@ Instructions:
             style={{
               marginTop: '0.5rem',
               height: '0.5rem',
-              background: '#e5e7eb',
+              background: 'var(--progress-track)',
               borderRadius: '9999px',
               overflow: 'hidden',
             }}
@@ -396,7 +395,7 @@ Instructions:
               style={{
                 width: `${documentProgress?.progress || progress?.progress || 0}%`,
                 height: '100%',
-                background: '#2563eb',
+                background: 'var(--accent-primary)',
                 transition: 'width 0.3s',
               }}
             />
@@ -409,15 +408,15 @@ Instructions:
         <Card
           style={{
             marginBottom: '1.5rem',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
+            background: 'var(--error-bg)',
+            border: '1px solid var(--error-border)',
           }}
         >
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <span style={{ fontSize: '1.25rem' }}>⚠️</span>
             <div>
-              <div style={{ fontWeight: 500, color: '#dc2626' }}>Import Failed</div>
-              <div style={{ fontSize: '0.875rem', color: '#991b1b', marginTop: '0.25rem' }}>
+              <div style={{ fontWeight: 500, color: 'var(--error)' }}>Import Failed</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--error-text)', marginTop: '0.25rem' }}>
                 {error}
               </div>
             </div>
@@ -426,11 +425,11 @@ Instructions:
       )}
 
       {/* Tips */}
-      <Card style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-        <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#166534', marginBottom: '0.5rem' }}>
+      <Card style={{ background: 'var(--success-bg)', border: '1px solid var(--success-border)' }}>
+        <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--success-text)', marginBottom: '0.5rem' }}>
           💡 Tips for best results
         </h3>
-        <ul style={{ fontSize: '0.875rem', color: '#15803d', margin: 0, paddingLeft: '1.25rem' }}>
+        <ul style={{ fontSize: '0.875rem', color: 'var(--success)', margin: 0, paddingLeft: '1.25rem' }}>
           <li>Include both ingredients and step-by-step instructions</li>
           <li>Specify cooking times and temperatures when available</li>
           <li>The AI will generate visual prompts for each step</li>

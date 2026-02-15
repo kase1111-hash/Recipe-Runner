@@ -110,9 +110,10 @@ export function ChefOllamaChat({
 
     try {
       const currentStep = recipe.steps[currentStepIndex];
+      const stepTitle = currentStep?.title || `Step ${currentStepIndex + 1}`;
       const result = await executeQuickAction(
         action,
-        `Currently on step ${currentStepIndex + 1}: ${currentStep.title}`,
+        `Currently on step ${currentStepIndex + 1}: ${stepTitle}`,
         recipe,
         currentStepIndex,
         checkedIngredients
@@ -137,15 +138,25 @@ export function ChefOllamaChat({
   function handleActionClick(actionType: string) {
     switch (actionType) {
       case 'update_recipe':
-        // Would trigger recipe update flow
-        alert('Recipe update feature coming soon!');
+        // TODO: trigger recipe update flow
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'Recipe update feature is not yet available. For now, you can make this change manually in the recipe editor.' },
+        ]);
         break;
       case 'just_this_time':
         // Just acknowledge, no permanent change
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'Got it! Using this substitution just for this cook.' },
+        ]);
         break;
       case 'save_as_variant':
-        // Would create a variant recipe
-        alert('Save as variant feature coming soon!');
+        // TODO: create a variant recipe
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'Save as variant is not yet available. You can import the recipe again and make the changes in the editor.' },
+        ]);
         break;
     }
   }
@@ -161,8 +172,8 @@ export function ChefOllamaChat({
         bottom: 0,
         width: '400px',
         maxWidth: '100vw',
-        background: 'white',
-        boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
+        background: 'var(--card-bg)',
+        boxShadow: 'var(--card-shadow-lg)',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 100,
@@ -172,7 +183,7 @@ export function ChefOllamaChat({
       <header
         style={{
           padding: '1rem',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--border-primary)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -180,14 +191,14 @@ export function ChefOllamaChat({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '1.5rem' }}>👨‍🍳</span>
-          <span style={{ fontWeight: 600, color: '#111827' }}>Chef Ollama</span>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Chef Ollama</span>
           {connected !== null && (
             <span
               style={{
                 width: '0.5rem',
                 height: '0.5rem',
                 borderRadius: '50%',
-                background: connected ? '#22c55e' : '#f59e0b',
+                background: connected ? 'var(--success)' : 'var(--warning)',
               }}
               title={connected ? 'Connected' : 'Using offline mode'}
             />
@@ -202,16 +213,16 @@ export function ChefOllamaChat({
       <div
         style={{
           padding: '0.75rem 1rem',
-          background: '#f3f4f6',
+          background: 'var(--bg-tertiary)',
           fontSize: '0.75rem',
-          color: '#6b7280',
+          color: 'var(--text-tertiary)',
         }}
       >
         <div>
           <strong>Recipe:</strong> {recipe.name}
         </div>
         <div>
-          <strong>Step {currentStepIndex + 1}:</strong> {currentStep.title}
+          <strong>Step {currentStepIndex + 1}:</strong> {currentStep?.title || 'Unknown step'}
         </div>
       </div>
 
@@ -227,7 +238,7 @@ export function ChefOllamaChat({
         }}
       >
         {messages.length === 0 && (
-          <div style={{ textAlign: 'center', color: '#6b7280', marginTop: '2rem' }}>
+          <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', marginTop: '2rem' }}>
             <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👨‍🍳</div>
             <p style={{ margin: 0 }}>
               I'm here to help! Ask me about substitutions, techniques, or what to do if something
@@ -248,8 +259,8 @@ export function ChefOllamaChat({
               style={{
                 padding: '0.75rem 1rem',
                 borderRadius: '1rem',
-                background: message.role === 'user' ? '#2563eb' : '#f3f4f6',
-                color: message.role === 'user' ? 'white' : '#111827',
+                background: message.role === 'user' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                color: message.role === 'user' ? 'white' : 'var(--text-primary)',
               }}
             >
               {message.content}
@@ -285,8 +296,8 @@ export function ChefOllamaChat({
               alignSelf: 'flex-start',
               padding: '0.75rem 1rem',
               borderRadius: '1rem',
-              background: '#f3f4f6',
-              color: '#6b7280',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text-tertiary)',
             }}
           >
             Thinking...
@@ -300,7 +311,7 @@ export function ChefOllamaChat({
       <div
         style={{
           padding: '0.75rem 1rem',
-          borderTop: '1px solid #e5e7eb',
+          borderTop: '1px solid var(--border-primary)',
           display: 'flex',
           gap: '0.5rem',
           flexWrap: 'wrap',
@@ -327,7 +338,7 @@ export function ChefOllamaChat({
         }}
         style={{
           padding: '1rem',
-          borderTop: '1px solid #e5e7eb',
+          borderTop: '1px solid var(--border-primary)',
           display: 'flex',
           gap: '0.5rem',
         }}
@@ -341,7 +352,7 @@ export function ChefOllamaChat({
           style={{
             flex: 1,
             padding: '0.75rem 1rem',
-            border: '1px solid #d1d5db',
+            border: '1px solid var(--border-secondary)',
             borderRadius: '0.5rem',
             fontSize: '1rem',
             outline: 'none',

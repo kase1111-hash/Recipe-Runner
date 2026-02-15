@@ -148,10 +148,10 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
         </Button>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
               Review & Edit Recipe
             </h1>
-            <p style={{ color: '#6b7280', margin: '0.25rem 0 0' }}>
+            <p style={{ color: 'var(--text-tertiary)', margin: '0.25rem 0 0' }}>
               Make any corrections before saving to {cookbook.title}
             </p>
           </div>
@@ -167,14 +167,14 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
       </header>
 
       {/* Confidence indicator */}
-      <Card style={{ marginBottom: '1.5rem', background: '#fefce8', border: '1px solid #fef08a' }}>
+      <Card style={{ marginBottom: '1.5rem', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '1.25rem' }}>🤖</span>
           <div>
-            <div style={{ fontWeight: 500, color: '#854d0e' }}>
+            <div style={{ fontWeight: 500, color: 'var(--warning-text)' }}>
               AI Parsing Confidence: {Math.round(recipe.confidence * 100)}%
             </div>
-            <div style={{ fontSize: '0.875rem', color: '#a16207' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--warning)' }}>
               Please review the extracted data and make any necessary corrections.
             </div>
           </div>
@@ -187,7 +187,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
           display: 'flex',
           gap: '0.25rem',
           marginBottom: '1.5rem',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--border-primary)',
         }}
       >
         {tabs.map((tab) => (
@@ -199,8 +199,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
               border: 'none',
               background: 'none',
               fontWeight: 500,
-              color: activeTab === tab.id ? '#2563eb' : '#6b7280',
-              borderBottom: activeTab === tab.id ? '2px solid #2563eb' : '2px solid transparent',
+              color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+              borderBottom: activeTab === tab.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
               cursor: 'pointer',
               marginBottom: '-1px',
             }}
@@ -214,12 +214,12 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <Card>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '1rem' }}>
               Basic Information
             </h3>
             <div style={{ display: 'grid', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                   Recipe Name
                 </label>
                 <input
@@ -229,14 +229,14 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--border-secondary)',
                     borderRadius: '0.375rem',
                     fontSize: '1rem',
                   }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                   Description
                 </label>
                 <textarea
@@ -246,7 +246,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--border-secondary)',
                     borderRadius: '0.375rem',
                     fontSize: '1rem',
                     resize: 'vertical',
@@ -255,7 +255,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                     Total Time
                   </label>
                   <input
@@ -265,13 +265,13 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     style={{
                       width: '100%',
                       padding: '0.5rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                     Active Time
                   </label>
                   <input
@@ -281,13 +281,13 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     style={{
                       width: '100%',
                       padding: '0.5rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                     Yield
                   </label>
                   <input
@@ -297,7 +297,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     style={{
                       width: '100%',
                       padding: '0.5rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
                     }}
                   />
@@ -308,12 +308,12 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
 
           {/* Classification Card */}
           <Card>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '1rem' }}>
               Classification
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                   Course Type
                 </label>
                 <select
@@ -322,10 +322,10 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--border-secondary)',
                     borderRadius: '0.375rem',
                     fontSize: '0.875rem',
-                    background: 'white',
+                    background: 'var(--card-bg)',
                   }}
                 >
                   <option value="">Select course type...</option>
@@ -335,12 +335,12 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     </option>
                   ))}
                 </select>
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
                   Helps with pairing suggestions and filtering
                 </p>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                   Cuisine
                 </label>
                 <select
@@ -349,10 +349,10 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--border-secondary)',
                     borderRadius: '0.375rem',
                     fontSize: '0.875rem',
-                    background: 'white',
+                    background: 'var(--card-bg)',
                   }}
                 >
                   <option value="">Select cuisine...</option>
@@ -362,7 +362,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     </option>
                   ))}
                 </select>
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
                   Used for pairing complementary dishes
                 </p>
               </div>
@@ -371,7 +371,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
 
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151', margin: 0 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>
                 Difficulty Assessment
               </h3>
               <Button
@@ -386,14 +386,14 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
             {difficulty ? (
               <DifficultyBadge score={difficulty} showDetails />
             ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
                 Click "Auto-Assess" to have AI evaluate the recipe difficulty, or manually set after saving.
               </p>
             )}
           </Card>
 
           <Card>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '1rem' }}>
               Equipment
             </h3>
             <input
@@ -404,17 +404,17 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--border-secondary)',
                 borderRadius: '0.375rem',
               }}
             />
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
               Separate items with commas
             </p>
           </Card>
 
           <Card>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '1rem' }}>
               Tags
             </h3>
             <input
@@ -425,14 +425,14 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--border-secondary)',
                 borderRadius: '0.375rem',
               }}
             />
           </Card>
 
           <Card>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '1rem' }}>
               Notes
             </h3>
             <textarea
@@ -443,7 +443,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--border-secondary)',
                 borderRadius: '0.375rem',
                 resize: 'vertical',
               }}
@@ -467,7 +467,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       placeholder="Amount"
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                         fontSize: '0.875rem',
                       }}
@@ -479,7 +479,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       placeholder="Unit"
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                         fontSize: '0.875rem',
                       }}
@@ -491,7 +491,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       placeholder="Ingredient"
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                         fontSize: '0.875rem',
                       }}
@@ -503,7 +503,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       placeholder="Prep (optional)"
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                         fontSize: '0.875rem',
                       }}
@@ -529,7 +529,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
             {recipe.steps.map((step, index) => (
               <Card key={index}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#6b7280' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>
                     Step {index + 1}
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => removeStep(index)}>
@@ -545,7 +545,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       placeholder="Step title"
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                       }}
                     />
@@ -556,7 +556,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       placeholder="Time"
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                       }}
                     />
@@ -565,7 +565,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       onChange={(e) => updateStep(index, { type: e.target.value as 'active' | 'passive' })}
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                       }}
                     >
@@ -581,13 +581,13 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     style={{
                       width: '100%',
                       padding: '0.5rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
                       resize: 'vertical',
                     }}
                   />
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: '#6b7280' }}>Visual Prompt (for AI image generation)</label>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Visual Prompt (for AI image generation)</label>
                     <textarea
                       value={step.visual_prompt}
                       onChange={(e) => updateStep(index, { visual_prompt: e.target.value })}
@@ -596,7 +596,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                         resize: 'vertical',
                         fontSize: '0.875rem',
@@ -610,7 +610,7 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     placeholder="Tip (optional)"
                     style={{
                       padding: '0.5rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
                       fontSize: '0.875rem',
                     }}
