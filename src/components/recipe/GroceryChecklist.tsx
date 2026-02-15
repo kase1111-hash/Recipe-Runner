@@ -79,25 +79,26 @@ export function GroceryChecklist({
   onOpenChef,
   onOpenScaler,
 }: GroceryChecklistProps) {
-  const [checked, setChecked] = useState<Set<string>>(new Set());
+  // Use index-based keys to handle duplicate ingredient names (e.g., "butter" for crust and filling)
+  const [checked, setChecked] = useState<Set<number>>(new Set());
   const [copied, setCopied] = useState(false);
 
   const allChecked = checked.size === recipe.ingredients.length;
 
-  function toggleIngredient(item: string) {
+  function toggleIngredient(index: number) {
     const next = new Set(checked);
-    if (next.has(item)) {
-      next.delete(item);
+    if (next.has(index)) {
+      next.delete(index);
     } else {
-      next.add(item);
+      next.add(index);
     }
     setChecked(next);
   }
 
-  function handleMissingIngredient(ingredient: Ingredient) {
+  function handleMissingIngredient(ingredient: Ingredient, index: number) {
     // Uncheck the ingredient
     const next = new Set(checked);
-    next.delete(ingredient.item);
+    next.delete(index);
     setChecked(next);
     // Open Chef Ollama for substitution
     onOpenChef(ingredient);
@@ -105,7 +106,8 @@ export function GroceryChecklist({
 
   function handleProceed() {
     if (allChecked) {
-      onComplete(Array.from(checked));
+      // Convert indices back to ingredient names for downstream consumers
+      onComplete(Array.from(checked).map((idx) => recipe.ingredients[idx].item));
     }
   }
 
@@ -192,9 +194,9 @@ export function GroceryChecklist({
       </Card>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {recipe.ingredients.map((ingredient) => (
+        {recipe.ingredients.map((ingredient, idx) => (
           <Card
-            key={ingredient.item}
+            key={idx}
             style={{
               padding: '1rem',
               opacity: ingredient.optional ? 0.8 : 1,
@@ -208,13 +210,13 @@ export function GroceryChecklist({
               }}
             >
               <button
-                onClick={() => toggleIngredient(ingredient.item)}
+                onClick={() => toggleIngredient(idx)}
                 style={{
                   width: '1.5rem',
                   height: '1.5rem',
                   borderRadius: '0.375rem',
-                  border: `2px solid ${checked.has(ingredient.item) ? 'var(--success)' : 'var(--border-secondary)'}`,
-                  background: checked.has(ingredient.item) ? 'var(--success)' : 'var(--card-bg)',
+                  border: `2px solid ${checked.has(idx) ? 'var(--success)' : 'var(--border-secondary)'}`,
+                  background: checked.has(idx) ? 'var(--success)' : 'var(--card-bg)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -222,7 +224,7 @@ export function GroceryChecklist({
                   flexShrink: 0,
                 }}
               >
-                {checked.has(ingredient.item) && (
+                {checked.has(idx) && (
                   <svg
                     width="14"
                     height="14"
@@ -243,8 +245,8 @@ export function GroceryChecklist({
                   style={{
                     fontSize: '1rem',
                     fontWeight: 500,
-                    color: checked.has(ingredient.item) ? 'var(--text-muted)' : 'var(--text-primary)',
-                    textDecoration: checked.has(ingredient.item) ? 'line-through' : 'none',
+                    color: checked.has(idx) ? 'var(--text-muted)' : 'var(--text-primary)',
+                    textDecoration: checked.has(idx) ? 'line-through' : 'none',
                   }}
                 >
                   <span style={{ fontWeight: 600 }}>
@@ -273,14 +275,14 @@ export function GroceryChecklist({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleMissingIngredient(ingredient)}
+                onClick={() => handleMissingIngredient(ingredient, idx)}
                 style={{ color: 'var(--text-tertiary)' }}
               >
                 Don't have this
               </Button>
             </div>
 
-            {ingredient.substitutes.length > 0 && !checked.has(ingredient.item) && (
+            {ingredient.substitutes.length > 0 && !checked.has(idx) && (
               <div
                 style={{
                   marginTop: '0.5rem',

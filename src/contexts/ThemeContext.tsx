@@ -182,8 +182,11 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [mode, setModeState] = useState<ThemeMode>(() => {
-    // Initialize from preferences
+    // Initialize from preferences, using theme_mode if available for 'system' support
     const prefs = getPreferences();
+    if (prefs.theme_mode) {
+      return prefs.theme_mode;
+    }
     return prefs.dark_mode ? 'dark' : 'light';
   });
 
@@ -232,10 +235,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   function setMode(newMode: ThemeMode) {
     setModeState(newMode);
 
-    // Persist to preferences
-    const prefs = getPreferences();
+    // Persist to preferences (store both the mode selection and the boolean for backwards compat)
     savePreferences({
-      ...prefs,
+      theme_mode: newMode,
       dark_mode: newMode === 'dark' || (newMode === 'system' && systemPreference === 'dark'),
     });
   }

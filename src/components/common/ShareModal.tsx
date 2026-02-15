@@ -76,7 +76,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'var(--overlay-bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -87,7 +87,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
     >
       <div
         style={{
-          background: 'white',
+          background: 'var(--card-bg)',
           borderRadius: '0.75rem',
           width: '100%',
           maxWidth: '450px',
@@ -99,7 +99,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
         <div
           style={{
             padding: '1rem 1.5rem',
-            borderBottom: '1px solid #e5e7eb',
+            borderBottom: '1px solid var(--border-primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -115,7 +115,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
               border: 'none',
               fontSize: '1.25rem',
               cursor: 'pointer',
-              color: '#6b7280',
+              color: 'var(--text-tertiary)',
             }}
           >
             x
@@ -126,12 +126,12 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
         <div
           style={{
             padding: '1rem 1.5rem',
-            background: '#f9fafb',
-            borderBottom: '1px solid #e5e7eb',
+            background: 'var(--bg-secondary)',
+            borderBottom: '1px solid var(--border-primary)',
           }}
         >
-          <div style={{ fontWeight: 500, color: '#111827' }}>{recipe.name}</div>
-          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+          <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{recipe.name}</div>
+          <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
             {recipe.yield} | {recipe.total_time}
           </div>
         </div>
@@ -140,7 +140,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
         <div
           style={{
             display: 'flex',
-            borderBottom: '1px solid #e5e7eb',
+            borderBottom: '1px solid var(--border-primary)',
           }}
         >
           {(['link', 'social', 'export'] as ShareTab[]).map((tab) => (
@@ -152,8 +152,8 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                 padding: '0.75rem',
                 background: 'none',
                 border: 'none',
-                borderBottom: activeTab === tab ? '2px solid #2563eb' : '2px solid transparent',
-                color: activeTab === tab ? '#2563eb' : '#6b7280',
+                borderBottom: activeTab === tab ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                color: activeTab === tab ? 'var(--accent-primary)' : 'var(--text-tertiary)',
                 fontWeight: activeTab === tab ? 600 : 400,
                 cursor: 'pointer',
                 textTransform: 'capitalize',
@@ -170,7 +170,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
             <div>
               {!shareLink ? (
                 <>
-                  <p style={{ color: '#6b7280', margin: '0 0 1rem', fontSize: '0.875rem' }}>
+                  <p style={{ color: 'var(--text-tertiary)', margin: '0 0 1rem', fontSize: '0.875rem' }}>
                     Create a shareable link to this recipe. Anyone with the link can view it.
                   </p>
 
@@ -184,7 +184,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
                       }}
                     >
@@ -204,7 +204,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                   <div
                     style={{
                       padding: '0.75rem',
-                      background: '#f3f4f6',
+                      background: 'var(--bg-tertiary)',
                       borderRadius: '0.375rem',
                       marginBottom: '1rem',
                       wordBreak: 'break-all',
@@ -240,10 +240,10 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                       width: '100%',
                       padding: '0.5rem',
                       background: 'none',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
                       cursor: 'pointer',
-                      color: '#6b7280',
+                      color: 'var(--text-tertiary)',
                       fontSize: '0.875rem',
                     }}
                   >
@@ -258,18 +258,18 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                         style={{
                           width: '150px',
                           height: '150px',
-                          border: '1px solid #e5e7eb',
+                          border: '1px solid var(--border-primary)',
                           borderRadius: '0.375rem',
                         }}
                       />
-                      <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
                         Scan to view recipe
                       </p>
                     </div>
                   )}
 
                   {shareLink.expiresAt && (
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '1rem', textAlign: 'center' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '1rem', textAlign: 'center' }}>
                       Link expires {new Date(shareLink.expiresAt).toLocaleDateString()}
                     </p>
                   )}
@@ -280,7 +280,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
 
           {activeTab === 'social' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <p style={{ color: '#6b7280', margin: '0 0 0.5rem', fontSize: '0.875rem' }}>
+              <p style={{ color: 'var(--text-tertiary)', margin: '0 0 0.5rem', fontSize: '0.875rem' }}>
                 Share this recipe on social media
               </p>
 
@@ -312,7 +312,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                   alignItems: 'center',
                   gap: '0.75rem',
                   padding: '0.75rem 1rem',
-                  background: shareLink ? '#1877f2' : '#d1d5db',
+                  background: shareLink ? '#1877f2' : 'var(--border-secondary)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.375rem',
@@ -333,7 +333,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                   alignItems: 'center',
                   gap: '0.75rem',
                   padding: '0.75rem 1rem',
-                  background: '#6b7280',
+                  background: 'var(--text-tertiary)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.375rem',
@@ -354,7 +354,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                     alignItems: 'center',
                     gap: '0.75rem',
                     padding: '0.75rem 1rem',
-                    background: '#374151',
+                    background: 'var(--bg-tertiary)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.375rem',
@@ -372,7 +372,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
 
           {activeTab === 'export' && (
             <div>
-              <p style={{ color: '#6b7280', margin: '0 0 1rem', fontSize: '0.875rem' }}>
+              <p style={{ color: 'var(--text-tertiary)', margin: '0 0 1rem', fontSize: '0.875rem' }}>
                 Download or copy recipe in different formats
               </p>
 
@@ -381,14 +381,14 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                 <div
                   style={{
                     padding: '1rem',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid var(--border-primary)',
                     borderRadius: '0.375rem',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                       <div style={{ fontWeight: 500 }}>JSON Format</div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                         Full recipe data, importable
                       </div>
                     </div>
@@ -407,14 +407,14 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                 <div
                   style={{
                     padding: '1rem',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid var(--border-primary)',
                     borderRadius: '0.375rem',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                       <div style={{ fontWeight: 500 }}>Markdown</div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                         Formatted for notes apps
                       </div>
                     </div>
@@ -433,14 +433,14 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                 <div
                   style={{
                     padding: '1rem',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid var(--border-primary)',
                     borderRadius: '0.375rem',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                       <div style={{ fontWeight: 500 }}>Plain Text</div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                         Simple, readable format
                       </div>
                     </div>
@@ -461,10 +461,10 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                   style={{
                     marginTop: '1rem',
                     padding: '0.5rem',
-                    background: '#d1fae5',
+                    background: 'var(--success-bg)',
                     borderRadius: '0.375rem',
                     textAlign: 'center',
-                    color: '#065f46',
+                    color: 'var(--success-text)',
                     fontSize: '0.875rem',
                   }}
                 >
