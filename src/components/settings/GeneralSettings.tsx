@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button, Card } from '../common';
 import { useTheme, type ThemeMode } from '../../contexts';
 import { getPreferences, savePreferences } from '../../db';
+import { validateOllamaEndpoint } from '../../services/utils';
 import type { UserPreferences } from '../../types';
 
 interface GeneralSettingsProps {
@@ -18,6 +19,10 @@ export function GeneralSettings({ onClose }: GeneralSettingsProps) {
   const [preferences, setPreferences] = useState<UserPreferences>(getPreferences);
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [saved, setSaved] = useState(false);
+  const [endpointWarning, setEndpointWarning] = useState<string | undefined>(() => {
+    const result = validateOllamaEndpoint(preferences.ollama_config.endpoint);
+    return result.warning;
+  });
 
   function updatePreferences(updates: Partial<UserPreferences>) {
     const newPrefs = { ...preferences, ...updates };
@@ -229,20 +234,27 @@ export function GeneralSettings({ onClose }: GeneralSettingsProps) {
           {activeTab === 'ai' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Ollama Endpoint */}
-              <SettingSection title="Ollama Endpoint" description="Local AI server address">
+              <SettingSection title="Ollama Endpoint" description="Local AI server address. All recipe data and conversations are sent here.">
                 <input
                   type="text"
                   value={preferences.ollama_config.endpoint}
-                  onChange={(e) =>
-                    updatePreferences({
-                      ollama_config: { ...preferences.ollama_config, endpoint: e.target.value },
-                    })
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const result = validateOllamaEndpoint(value);
+                    setEndpointWarning(result.warning);
+                    if (result.valid || value === '') {
+                      updatePreferences({
+                        ollama_config: { ...preferences.ollama_config, endpoint: value },
+                      });
+                    }
+                  }}
                   placeholder="http://localhost:11434"
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '1px solid var(--input-border)',
+                    border: endpointWarning
+                      ? '2px solid var(--warning, #f59e0b)'
+                      : '1px solid var(--input-border)',
                     borderRadius: '0.5rem',
                     background: 'var(--input-bg)',
                     color: 'var(--text-primary)',
@@ -250,6 +262,25 @@ export function GeneralSettings({ onClose }: GeneralSettingsProps) {
                     fontFamily: 'monospace',
                   }}
                 />
+                {endpointWarning && (
+                  <div
+                    style={{
+                      marginTop: '0.5rem',
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      background: 'var(--warning-bg, #fef3cd)',
+                      border: '1px solid var(--warning-border, #ffc107)',
+                      fontSize: '0.8125rem',
+                      color: 'var(--text-primary)',
+                      display: 'flex',
+                      gap: '0.5rem',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <span style={{ flexShrink: 0 }}>Warning:</span>
+                    <span>{endpointWarning}</span>
+                  </div>
+                )}
               </SettingSection>
 
               {/* Model */}

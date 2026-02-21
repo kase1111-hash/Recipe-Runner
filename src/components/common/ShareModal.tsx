@@ -1,7 +1,7 @@
 // Share Modal Component
 // Phase 7 Feature - Share recipes and cookbooks
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './Button';
 import {
   shareRecipe,
@@ -30,6 +30,13 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
   const [expiresInDays, setExpiresInDays] = useState<number | undefined>(undefined);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showQR && shareLink && !qrCodeUrl) {
+      getRecipeQRCode(shareLink.shareCode).then(setQrCodeUrl).catch(() => setQrCodeUrl(null));
+    }
+  }, [showQR, shareLink, qrCodeUrl]);
 
   async function handleCreateLink() {
     const link = shareRecipe(recipe, { expiresInDays });
@@ -252,16 +259,22 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
 
                   {showQR && (
                     <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                      <img
-                        src={getRecipeQRCode(shareLink.shareCode)}
-                        alt="QR Code"
-                        style={{
-                          width: '150px',
-                          height: '150px',
-                          border: '1px solid var(--border-primary)',
-                          borderRadius: '0.375rem',
-                        }}
-                      />
+                      {qrCodeUrl ? (
+                        <img
+                          src={qrCodeUrl}
+                          alt="QR Code"
+                          style={{
+                            width: '150px',
+                            height: '150px',
+                            border: '1px solid var(--border-primary)',
+                            borderRadius: '0.375rem',
+                          }}
+                        />
+                      ) : (
+                        <div style={{ padding: '2rem', color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
+                          Generating QR code...
+                        </div>
+                      )}
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
                         Scan to view recipe
                       </p>
