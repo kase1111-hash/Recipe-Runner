@@ -17,7 +17,7 @@ export type StepType = 'active' | 'passive';
 
 export type TimerState = 'idle' | 'running' | 'paused' | 'complete' | 'overtime';
 
-export type SourceType = 'book' | 'url' | 'original';
+export type SourceType = 'book' | 'url' | 'original' | 'pdf' | 'ocr';
 
 // ============================================
 // Course Type Labels

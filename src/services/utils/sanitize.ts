@@ -35,6 +35,9 @@ export function sanitizeText(text: string): string {
   }
 
   const div = document.createElement('div');
+  // SAFE: textContent assigns plain text only; reading innerHTML returns the
+  // browser's entity-encoded version (e.g. "<" → "&lt;"). No user-controlled
+  // HTML is ever parsed here.
   div.textContent = text;
   return div.innerHTML;
 }
@@ -56,7 +59,9 @@ export function sanitizeAiResponse(response: string): string {
     ALLOWED_ATTR: [],
   });
 
-  // Decode HTML entities
+  // SAFE: The input to innerHTML is already DOMPurify-cleaned with zero allowed
+  // tags/attrs, so all HTML has been stripped. We use textarea.value to decode
+  // any remaining HTML entities (e.g. "&amp;" → "&") into plain text.
   const textarea = document.createElement('textarea');
   textarea.innerHTML = sanitized;
   return textarea.value;
@@ -81,5 +86,47 @@ export function sanitizeUrl(url: string): string {
     return parsed.href;
   } catch {
     return '';
+  }
+}
+
+/**
+ * Validate an Ollama endpoint URL. Returns whether the URL is valid and
+ * whether it points to a non-local server (which is a security concern since
+ * all recipe data and conversations are sent to this endpoint).
+ */
+export function validateOllamaEndpoint(endpoint: string): { valid: boolean; isLocal: boolean; warning?: string } {
+  if (!endpoint || typeof endpoint !== 'string') {
+    return { valid: false, isLocal: false };
+  }
+
+  const sanitized = sanitizeUrl(endpoint);
+  if (!sanitized) {
+    return { valid: false, isLocal: false };
+  }
+
+  try {
+    const url = new URL(sanitized);
+    const isLocal =
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '::1' ||
+      url.hostname.startsWith('192.168.') ||
+      url.hostname.startsWith('10.') ||
+      url.hostname.startsWith('172.16.') ||
+      url.hostname.endsWith('.local');
+
+    if (!isLocal) {
+      return {
+        valid: true,
+        isLocal: false,
+        warning:
+          'This endpoint is not on your local network. All recipe data, cooking context, ' +
+          'and conversations will be sent to this remote server.',
+      };
+    }
+
+    return { valid: true, isLocal: true };
+  } catch {
+    return { valid: false, isLocal: false };
   }
 }

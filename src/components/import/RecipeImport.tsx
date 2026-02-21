@@ -74,6 +74,16 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file size (10 MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      setError(
+        `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). ` +
+        `Maximum size is 10 MB.`
+      );
+      return;
+    }
+
     if (!isSupportedFileType(file)) {
       setError(`Unsupported file type: ${file.type}. Please use PDF, image, or text files.`);
       return;

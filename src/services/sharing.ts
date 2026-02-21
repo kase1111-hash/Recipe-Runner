@@ -48,12 +48,43 @@ export interface ShareOptions {
 const SHARED_RECIPES_KEY = 'recipe_runner_shared_recipes';
 const SHARED_COOKBOOKS_KEY = 'recipe_runner_shared_cookbooks';
 
+function isValidShareableRecipe(item: unknown): item is ShareableRecipe {
+  if (!item || typeof item !== 'object') return false;
+  const obj = item as Record<string, unknown>;
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.shareCode === 'string' &&
+    typeof obj.createdAt === 'string' &&
+    typeof obj.viewCount === 'number' &&
+    typeof obj.isPublic === 'boolean' &&
+    obj.recipe !== null && typeof obj.recipe === 'object'
+  );
+}
+
+function isValidShareableCookbook(item: unknown): item is ShareableCookbook {
+  if (!item || typeof item !== 'object') return false;
+  const obj = item as Record<string, unknown>;
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.shareCode === 'string' &&
+    typeof obj.createdAt === 'string' &&
+    typeof obj.viewCount === 'number' &&
+    typeof obj.isPublic === 'boolean' &&
+    obj.cookbook !== null && typeof obj.cookbook === 'object' &&
+    Array.isArray(obj.recipes)
+  );
+}
+
 function loadSharedRecipes(): Map<string, ShareableRecipe> {
   try {
     const stored = localStorage.getItem(SHARED_RECIPES_KEY);
     if (stored) {
-      const items: ShareableRecipe[] = JSON.parse(stored);
-      return new Map(items.map(item => [item.shareCode, item]));
+      const items: unknown[] = JSON.parse(stored);
+      const valid = items.filter(isValidShareableRecipe);
+      if (valid.length !== items.length) {
+        console.warn(`Filtered out ${items.length - valid.length} invalid shared recipe entries`);
+      }
+      return new Map(valid.map(item => [item.shareCode, item]));
     }
   } catch {
     // Ignore parse errors
@@ -69,8 +100,12 @@ function loadSharedCookbooks(): Map<string, ShareableCookbook> {
   try {
     const stored = localStorage.getItem(SHARED_COOKBOOKS_KEY);
     if (stored) {
-      const items: ShareableCookbook[] = JSON.parse(stored);
-      return new Map(items.map(item => [item.shareCode, item]));
+      const items: unknown[] = JSON.parse(stored);
+      const valid = items.filter(isValidShareableCookbook);
+      if (valid.length !== items.length) {
+        console.warn(`Filtered out ${items.length - valid.length} invalid shared cookbook entries`);
+      }
+      return new Map(valid.map(item => [item.shareCode, item]));
     }
   } catch {
     // Ignore parse errors
@@ -88,15 +123,16 @@ function saveSharedCookbooks(cookbooks: Map<string, ShareableCookbook>): void {
 
 function generateShareCode(length: number = 8): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let code = '';
-  for (let i = 0; i < length; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, (n) => chars[n % chars.length]).join('');
 }
 
 function generateId(): string {
-  return `share_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const randomBytes = new Uint8Array(9);
+  crypto.getRandomValues(randomBytes);
+  const randomString = Array.from(randomBytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `share_${Date.now()}_${randomString}`;
 }
 
 // ============================================
@@ -328,24 +364,33 @@ export function getRecipeShareData(recipe: Recipe, format: ExportFormat = 'json'
 }
 
 // ============================================
-// QR Code Generation (simple text-based)
+// QR Code Generation (local, no external API)
 // ============================================
 
-export function generateQRCodeUrl(data: string): string {
-  // Using a public QR code API for simplicity
-  // In production, you'd use a library like qrcode-generator
-  const encoded = encodeURIComponent(data);
-  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encoded}`;
+// QR codes are generated locally to avoid leaking share URLs to third-party APIs.
+// Previously used api.qrserver.com which received all share URLs.
+
+let qrcodeModule: typeof import('qrcode') | null = null;
+
+async function ensureQRCode(): Promise<typeof import('qrcode')> {
+  if (qrcodeModule) return qrcodeModule;
+  qrcodeModule = await import('qrcode');
+  return qrcodeModule;
 }
 
-export function getRecipeQRCode(shareCode: string): string {
+export async function generateQRCodeDataUrl(data: string): Promise<string> {
+  const QRCode = await ensureQRCode();
+  return QRCode.toDataURL(data, { width: 200, margin: 2 });
+}
+
+export async function getRecipeQRCode(shareCode: string): Promise<string> {
   const url = `${window.location.origin}/share/recipe/${shareCode}`;
-  return generateQRCodeUrl(url);
+  return generateQRCodeDataUrl(url);
 }
 
-export function getCookbookQRCode(shareCode: string): string {
+export async function getCookbookQRCode(shareCode: string): Promise<string> {
   const url = `${window.location.origin}/share/cookbook/${shareCode}`;
-  return generateQRCodeUrl(url);
+  return generateQRCodeDataUrl(url);
 }
 
 // ============================================

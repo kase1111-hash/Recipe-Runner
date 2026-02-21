@@ -475,12 +475,21 @@ async function blobToDataUri(blob: Blob): Promise<string> {
   });
 }
 
+const IMAGE_CACHE_MAX_SIZE = 100 * 1024 * 1024; // 100 MB
+const IMAGE_CACHE_MAX_AGE_DAYS = 30;
+
 export async function cacheStepImage(
   recipeId: string,
   stepIndex: number,
   imageData: string,
   version: number = 1
 ): Promise<void> {
+  // Check cache size before adding new images
+  const stats = await getImageCacheStats();
+  if (stats.totalSize > IMAGE_CACHE_MAX_SIZE * 0.8) {
+    await cleanupOldImages();
+  }
+
   const id = `${recipeId}_${stepIndex}_v${version}`;
   const storedData = dataUriToBlob(imageData);
 
@@ -618,11 +627,46 @@ export const defaultPreferences: UserPreferences = {
   auto_generate_visuals: true,
 };
 
+function validateStoredPreferences(parsed: unknown): parsed is Partial<UserPreferences> {
+  if (!parsed || typeof parsed !== 'object') return false;
+  const obj = parsed as Record<string, unknown>;
+
+  // Validate skill_level if present
+  if (obj.skill_level !== undefined) {
+    const validSkills = ['beginner', 'intermediate', 'advanced', 'expert'];
+    if (typeof obj.skill_level !== 'string' || !validSkills.includes(obj.skill_level)) return false;
+  }
+
+  // Validate timer_alert_type if present
+  if (obj.timer_alert_type !== undefined) {
+    const validAlerts = ['sound', 'vibrate', 'both'];
+    if (typeof obj.timer_alert_type !== 'string' || !validAlerts.includes(obj.timer_alert_type)) return false;
+  }
+
+  // Validate ollama_config if present
+  if (obj.ollama_config !== undefined) {
+    if (typeof obj.ollama_config !== 'object' || obj.ollama_config === null) return false;
+    const config = obj.ollama_config as Record<string, unknown>;
+    if (config.endpoint !== undefined && typeof config.endpoint !== 'string') return false;
+    if (config.model !== undefined && typeof config.model !== 'string') return false;
+    if (config.temperature !== undefined && (typeof config.temperature !== 'number' || config.temperature < 0 || config.temperature > 2)) return false;
+    if (config.timeout_ms !== undefined && (typeof config.timeout_ms !== 'number' || config.timeout_ms < 1000)) return false;
+  }
+
+  return true;
+}
+
 export function getPreferences(): UserPreferences {
   try {
     const stored = localStorage.getItem(PREFERENCES_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
+
+      if (!validateStoredPreferences(parsed)) {
+        console.warn('Stored preferences failed validation, using defaults');
+        return defaultPreferences;
+      }
+
       return {
         ...defaultPreferences,
         ...parsed,
@@ -654,9 +698,42 @@ export function savePreferences(preferences: Partial<UserPreferences>): void {
 }
 
 // ============================================
+// Image Cache Cleanup
+// ============================================
+
+async function cleanupOldImages(maxAgeDays: number = IMAGE_CACHE_MAX_AGE_DAYS): Promise<number> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
+  const cutoffISO = cutoffDate.toISOString();
+
+  const all = await db.imageCache.toArray();
+  const toDelete = all.filter(item => item.created_at < cutoffISO);
+
+  if (toDelete.length > 0) {
+    await db.imageCache.bulkDelete(toDelete.map(item => item.id));
+  }
+
+  return toDelete.length;
+}
+
+export async function cleanupImageCache(): Promise<number> {
+  return cleanupOldImages();
+}
+
+// ============================================
 // Database Initialization
 // ============================================
 
 export async function initializeDatabase(): Promise<void> {
   await db.open();
+
+  // Cleanup old cached images on startup
+  try {
+    const cleaned = await cleanupOldImages();
+    if (cleaned > 0) {
+      console.info(`Cleaned up ${cleaned} old cached images on startup`);
+    }
+  } catch (error) {
+    console.warn('Failed to cleanup image cache on startup:', error);
+  }
 }

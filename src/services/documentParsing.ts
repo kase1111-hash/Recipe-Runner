@@ -13,29 +13,15 @@ async function ensurePdfJs(): Promise<typeof import('pdfjs-dist')> {
   const mod = await import('pdfjs-dist');
   pdfjsModule = mod;
 
-  // Configure the worker using CDN sources with fallback
-  const version = mod.version;
-  const workerSources = [
-    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.mjs`,
-    `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`,
-    `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`,
-  ];
+  // Bundle worker locally instead of loading from external CDNs.
+  // CDN-loaded workers are a supply-chain risk: a compromised CDN can serve
+  // arbitrary JavaScript that executes in the app's worker context.
+  const workerUrl = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+  );
+  mod.GlobalWorkerOptions.workerSrc = workerUrl.href;
 
-  for (const src of workerSources) {
-    try {
-      const response = await fetch(src, { method: 'HEAD', mode: 'cors' });
-      if (response.ok) {
-        mod.GlobalWorkerOptions.workerSrc = src;
-        return mod;
-      }
-    } catch {
-      // Try next source
-      continue;
-    }
-  }
-
-  // Fallback to first source even if we couldn't verify
-  mod.GlobalWorkerOptions.workerSrc = workerSources[0];
   return mod;
 }
 
