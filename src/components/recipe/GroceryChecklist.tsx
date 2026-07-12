@@ -86,20 +86,26 @@ export function GroceryChecklist({
   const allChecked = checked.size === recipe.ingredients.length;
 
   function toggleIngredient(index: number) {
-    const next = new Set(checked);
-    if (next.has(index)) {
-      next.delete(index);
-    } else {
-      next.add(index);
-    }
-    setChecked(next);
+    // Functional update — rapid successive toggles batch into one render,
+    // and building from a stale closure would drop all but the last one
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
   }
 
   function handleMissingIngredient(ingredient: Ingredient, index: number) {
     // Uncheck the ingredient
-    const next = new Set(checked);
-    next.delete(index);
-    setChecked(next);
+    setChecked((prev) => {
+      const next = new Set(prev);
+      next.delete(index);
+      return next;
+    });
     // Open Chef Ollama for substitution
     onOpenChef(ingredient);
   }

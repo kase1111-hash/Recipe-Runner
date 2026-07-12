@@ -68,6 +68,10 @@ export function DifficultyBadge({ score, showDetails = false }: DifficultyBadgeP
 }
 
 function ScoreIndicator({ value }: { value: number }) {
+  // Sub-scores are plain numbers — clamp so an out-of-range value (0, 6, …)
+  // can't index DifficultyLabels as undefined and crash on .color
+  const clamped = Math.min(5, Math.max(1, Math.round(value) || 1));
+  const color = DifficultyLabels[clamped].color;
   return (
     <div style={{ display: 'flex', gap: '2px' }}>
       {[1, 2, 3, 4, 5].map((i) => (
@@ -77,7 +81,7 @@ function ScoreIndicator({ value }: { value: number }) {
             width: '0.5rem',
             height: '0.5rem',
             borderRadius: '2px',
-            background: i <= value ? DifficultyLabels[value].color : 'var(--progress-track)',
+            background: i <= clamped ? color : 'var(--progress-track)',
           }}
         />
       ))}

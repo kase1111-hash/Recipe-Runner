@@ -19,12 +19,14 @@ type AppView =
   | 'groceries'
   | 'miseenplace'
   | 'cooking'
-  | 'complete';
+  | 'complete'
+  | 'shopping';
 
 interface RouterState {
   view: AppView;
   selectedCookbook: Cookbook | null;
   selectedRecipe: Recipe | null;
+  initialized: boolean;
 }
 
 type RouterDispatch = (action: RouterAction) => void;
@@ -40,12 +42,31 @@ type RouterAction =
 // Path Building
 // ============================================
 
+// Cooking-flow sub-views get their own URL segment so each phase is a
+// distinct history entry (browser Back steps back one phase, not out of
+// the flow entirely).
+const COOKING_FLOW_SEGMENTS: Partial<Record<AppView, string>> = {
+  groceries: 'groceries',
+  miseenplace: 'prep',
+  cooking: 'cooking',
+  complete: 'complete',
+};
+
+const SEGMENT_TO_VIEW: Record<string, AppView> = {
+  groceries: 'groceries',
+  prep: 'miseenplace',
+  cooking: 'cooking',
+  complete: 'complete',
+};
+
 function getPathFromState(state: RouterState): string {
   switch (state.view) {
     case 'library':
       return '/';
     case 'bookshelf':
       return '/bookshelf';
+    case 'shopping':
+      return '/shopping';
     case 'cookbook':
       return state.selectedCookbook
         ? `/cookbook/${state.selectedCookbook.id}`
@@ -56,7 +77,9 @@ function getPathFromState(state: RouterState): string {
     case 'cooking':
     case 'complete':
       if (state.selectedCookbook && state.selectedRecipe) {
-        return `/cookbook/${state.selectedCookbook.id}/${state.selectedRecipe.id}`;
+        const base = `/cookbook/${state.selectedCookbook.id}/${state.selectedRecipe.id}`;
+        const segment = COOKING_FLOW_SEGMENTS[state.view];
+        return segment ? `${base}/${segment}` : base;
       }
       return '/';
     case 'import':
@@ -90,6 +113,10 @@ function parseRoute(pathname: string): ParsedRoute {
     return { view: 'bookshelf' };
   }
 
+  if (segments[0] === 'shopping') {
+    return { view: 'shopping' };
+  }
+
   if (segments[0] === 'cookbook') {
     if (segments.length === 1) {
       return { view: 'library' };
@@ -101,7 +128,11 @@ function parseRoute(pathname: string): ParsedRoute {
     if (segments[2] === 'import') {
       return { view: 'import', cookbookId };
     }
-    return { view: 'detail', cookbookId, recipeId: segments[2] };
+    const recipeId = segments[2];
+    if (segments.length >= 4 && SEGMENT_TO_VIEW[segments[3]]) {
+      return { view: SEGMENT_TO_VIEW[segments[3]], cookbookId, recipeId };
+    }
+    return { view: 'detail', cookbookId, recipeId };
   }
 
   return { view: 'library' };
@@ -114,9 +145,21 @@ function parseRoute(pathname: string): ParsedRoute {
 export function useRouter(state: RouterState, dispatch: RouterDispatch): void {
   const isPopstateRef = useRef(false);
   const prevPathRef = useRef<string | null>(null);
-
-  // Push URL when state changes (but not during popstate handling)
+  // Capture the URL the page loaded with BEFORE any state-driven push can
+  // overwrite it — deep links like /cookbook/x/y must survive the first render.
+  const initialPathRef = useRef(typeof window !== 'undefined' ? window.location.pathname : '/');
+  const hydratedRef = useRef(false);
+  // Latest state for the popstate handler (its effect only re-binds on dispatch)
+  const stateRef = useRef(state);
   useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  // Push URL when state changes (but not during popstate handling, and not
+  // before initial-URL hydration has run — otherwise the default 'library'
+  // state would clobber the deep-linked URL)
+  useEffect(() => {
+    if (!hydratedRef.current) return;
     if (isPopstateRef.current) {
       isPopstateRef.current = false;
       return;
@@ -141,12 +184,26 @@ export function useRouter(state: RouterState, dispatch: RouterDispatch): void {
         return;
       }
 
-      if (route.view === 'bookshelf') {
-        dispatch({ type: 'NAVIGATE', view: 'bookshelf' });
+      if (route.view === 'bookshelf' || route.view === 'shopping') {
+        dispatch({ type: 'NAVIGATE', view: route.view });
         return;
       }
 
       if (route.cookbookId) {
+        const current = stateRef.current;
+
+        // Same recipe already loaded in this session: just switch phase.
+        // This makes Back step through the cooking flow (cooking → prep →
+        // groceries → detail) without reloading or losing app state.
+        if (
+          route.recipeId &&
+          current.selectedRecipe?.id === route.recipeId &&
+          current.selectedCookbook?.id === route.cookbookId
+        ) {
+          dispatch({ type: 'NAVIGATE', view: route.view });
+          return;
+        }
+
         // Need to load the cookbook
         const cookbook = await getCookbook(route.cookbookId);
         if (!cookbook) {
@@ -155,7 +212,9 @@ export function useRouter(state: RouterState, dispatch: RouterDispatch): void {
         }
 
         if (route.recipeId) {
-          // Load the recipe
+          // Load the recipe. Cooking-flow sub-views are session state we
+          // can't safely restore cold (the grocery gate would be skipped),
+          // so a fresh navigation lands on the recipe detail instead.
           const recipes = await getRecipesByCookbook(cookbook.id);
           const recipe = recipes.find((r: Recipe) => r.id === route.recipeId);
           if (recipe) {
@@ -174,22 +233,31 @@ export function useRouter(state: RouterState, dispatch: RouterDispatch): void {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [dispatch]);
 
-  // Handle initial URL on first load (deep linking)
+  // Handle initial URL on first load (deep linking). Waits for app
+  // initialization (db + sample seed) so lookups don't race the seed.
   useEffect(() => {
+    if (!state.initialized || hydratedRef.current) return;
+    hydratedRef.current = true;
+
     async function hydrateFromUrl() {
-      const route = parseRoute(window.location.pathname);
-      prevPathRef.current = window.location.pathname;
+      const route = parseRoute(initialPathRef.current);
+      prevPathRef.current = initialPathRef.current;
 
       if (route.view === 'library') return; // Already the default
 
-      if (route.view === 'bookshelf') {
-        dispatch({ type: 'NAVIGATE', view: 'bookshelf' });
+      if (route.view === 'bookshelf' || route.view === 'shopping') {
+        dispatch({ type: 'NAVIGATE', view: route.view });
         return;
       }
 
       if (route.cookbookId) {
         const cookbook = await getCookbook(route.cookbookId);
-        if (!cookbook) return;
+        if (!cookbook) {
+          // Unknown cookbook: normalize the URL back to the library
+          prevPathRef.current = '/';
+          window.history.replaceState(null, '', '/');
+          return;
+        }
 
         dispatch({ type: 'SELECT_COOKBOOK', cookbook });
 
@@ -198,13 +266,18 @@ export function useRouter(state: RouterState, dispatch: RouterDispatch): void {
           const recipe = recipes.find((r: Recipe) => r.id === route.recipeId);
           if (recipe) {
             dispatch({ type: 'SELECT_RECIPE', recipe });
+            // Cooking-flow deep links land on detail (grocery gate intact);
+            // reflect that in the URL.
+            const detailPath = `/cookbook/${cookbook.id}/${recipe.id}`;
+            if (initialPathRef.current !== detailPath) {
+              prevPathRef.current = detailPath;
+              window.history.replaceState(null, '', detailPath);
+            }
           }
         }
       }
     }
 
     hydrateFromUrl();
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [state.initialized, dispatch]);
 }

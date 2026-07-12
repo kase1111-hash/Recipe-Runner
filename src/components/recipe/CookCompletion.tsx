@@ -61,8 +61,15 @@ export function CookCompletion({
   };
 
   const cookCount = recipe.cook_history.length;
-  const avgRating = cookCount > 0
-    ? recipe.cook_history.reduce((acc, h) => acc + h.rating, 0) / cookCount
+  // Include the rating just submitted — the recipe prop still holds the
+  // pre-save history, so without this the "Avg Rating" stat lags one cook
+  // behind the "Times Cooked" stat. Unrated cooks (rating 0) don't count.
+  const allRatings = recipe.cook_history
+    .map((h) => h.rating)
+    .concat(saved && rating > 0 ? [rating] : [])
+    .filter((r) => r > 0);
+  const avgRating = allRatings.length > 0
+    ? allRatings.reduce((acc, r) => acc + r, 0) / allRatings.length
     : 0;
 
   if (saved) {

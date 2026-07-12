@@ -256,8 +256,9 @@ async function callOllama(prompt: string, systemPrompt?: string): Promise<string
 }
 
 function extractJSON(text: string): unknown {
-  // Try to find JSON in the response
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  // Try to find JSON in the response — either an object or a top-level array
+  // (generateVisualPrompts asks the model for a bare JSON array)
+  const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
   if (jsonMatch) {
     try {
       return JSON.parse(jsonMatch[0]);
@@ -306,9 +307,11 @@ export async function parseRecipeFromText(
       // Convert to Fahrenheit for comparison
       const tempF = tempUnit === '°C' ? (tempValue * 9) / 5 + 32 : tempValue;
       if (tempF > 0 && tempF < 130) {
-        // Dangerously low temperature — override with safe default
-        console.warn(`Safe temperature ${tempValue}${tempUnit} seems dangerously low, flagging for review`);
-        confidence = 0.5; // Lower confidence to signal manual review needed
+        // Dangerously low temperature — drop it rather than display an unsafe
+        // target in the cooking UI, and lower confidence to signal manual review
+        console.warn(`Safe temperature ${tempValue}${tempUnit} seems dangerously low, discarding for review`);
+        safeTemp = null;
+        confidence = 0.5;
       }
     }
 
@@ -474,7 +477,7 @@ function normalizeSteps(steps: unknown[]): Step[] {
       visual_prompt: String(s.visual_prompt || ''),
       temperature: s.temperature ? {
         value: Number((s.temperature as Record<string, unknown>).value) || 0,
-        unit: (String((s.temperature as Record<string, unknown>).unit) || '°F') as '°F' | '°C',
+        unit: normalizeTemperatureUnit((s.temperature as Record<string, unknown>).unit),
         target: (s.temperature as Record<string, unknown>).target ? String((s.temperature as Record<string, unknown>).target) : undefined,
       } : null,
       timer_default: s.timer_default ? Number(s.timer_default) : (timeMinutes > 0 ? timeMinutes * 60 : null),
@@ -482,24 +485,30 @@ function normalizeSteps(steps: unknown[]): Step[] {
   });
 }
 
+function normalizeTemperatureUnit(rawUnit: unknown): '°F' | '°C' {
+  // Missing units default to °F; "C", "°C", "celsius" all normalize to °C
+  if (rawUnit == null) return '°F';
+  return /c/i.test(String(rawUnit)) ? '°C' : '°F';
+}
+
 function parseTimeToMinutes(time: unknown): number {
   if (typeof time === 'number') return time;
   if (typeof time !== 'string') return 0;
 
-  const hourMatch = time.match(/(\d+)\s*h/i);
+  const hourMatch = time.match(/(\d+(?:\.\d+)?)\s*h/i);
   const minMatch = time.match(/(\d+)\s*m/i);
 
   let minutes = 0;
-  if (hourMatch) minutes += parseInt(hourMatch[1]) * 60;
+  if (hourMatch) minutes += parseFloat(hourMatch[1]) * 60;
   if (minMatch) minutes += parseInt(minMatch[1]);
 
   // If no units, assume minutes
   if (!hourMatch && !minMatch) {
-    const num = parseInt(time);
+    const num = parseFloat(time);
     if (!isNaN(num)) minutes = num;
   }
 
-  return minutes;
+  return Math.round(minutes);
 }
 
 function formatMinutes(minutes: number): string {

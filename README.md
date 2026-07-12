@@ -33,6 +33,12 @@ Recipe Runner treats recipes as **programs for humans**:
 ### Recipe Selection
 - Browse available recipes with metadata (time, servings, step count)
 - Visual indicator for recipes requiring safe internal temperatures
+- Global search across every cookbook by name, ingredient, or tag
+
+### Shopping List
+- Add any recipe's ingredients to a persistent shopping list
+- Ingredients from multiple recipes are consolidated automatically (amounts summed, singular/plural merged)
+- Check items off in the store, add custom items, copy or share as text
 
 ### Grocery Mode
 - Interactive checklist of all ingredients

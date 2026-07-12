@@ -28,24 +28,27 @@ npm run test:coverage # Coverage report
 src/
 ├── App.tsx                    # Main app with useReducer state management
 ├── components/
-│   ├── common/                # Reusable UI (Button, Card, Timer, ErrorBoundary)
-│   ├── step/                  # Step execution (StepExecutor, StepVisual)
-│   ├── recipe/                # Recipe views (RecipeList, GroceryChecklist, RecipeScaler)
-│   ├── cookbook/              # Cookbook management
+│   ├── common/                # Reusable UI (Button, Card, Timer, ErrorBoundary, ShareModal)
+│   ├── step/                  # Step execution (StepExecutor)
+│   ├── recipe/                # Recipe views (RecipeList, GroceryChecklist, RecipeScaler, RecipeDetail)
+│   ├── cookbook/              # Cookbook library + bookshelf management
 │   ├── import/                # Recipe import/editor
-│   ├── mealplan/              # Meal planning
-│   ├── inventory/             # Pantry tracking
+│   ├── search/                # Global recipe search (GlobalSearch)
+│   ├── shopping/              # Multi-recipe shopping list (ShoppingListView)
 │   ├── chef-ollama/           # AI assistant
 │   └── settings/              # User preferences
 ├── services/                  # Business logic
 │   ├── recipeParser.ts        # AI recipe extraction
-│   ├── visualGeneration.ts    # Image generation
 │   ├── chefOllama.ts          # Local LLM integration
 │   ├── recipeScaling.ts       # Serving adjustments
-│   ├── mealPlanning.ts        # Meal plans + shopping lists
-│   ├── dietaryAdaptation.ts   # Allergy/restriction handling
+│   ├── recipeSearch.ts        # Cross-cookbook search + ranking
+│   ├── shoppingList.ts        # Ingredient consolidation for shopping list
+│   ├── documentParsing.ts     # PDF/image/text extraction
+│   ├── sharing.ts / export.ts # Recipe sharing and export formats
+│   ├── substitutions.ts       # Offline ingredient substitutions
 │   └── utils/                 # parseAmount, sanitize
 ├── db/index.ts                # Dexie.js database + CRUD
+├── hooks/useRouter.ts         # URL sync (deep links, back button)
 ├── contexts/                  # ThemeContext, KeyboardShortcuts
 └── types/index.ts             # All TypeScript interfaces
 ```
@@ -86,8 +89,7 @@ The app uses `useReducer` with these views:
 - `miseenplace` - Pre-cook prep checklist
 - `cooking` - Step-by-step execution
 - `complete` - Post-cook summary
-- `mealplanner` - Weekly meal planning
-- `inventory` - Pantry management
+- `shopping` - Consolidated multi-recipe shopping list
 - `import` / `edit` - Recipe creation/editing
 
 ## Development Guidelines
@@ -129,10 +131,11 @@ Key test files:
 | Service | Purpose |
 |---------|---------|
 | `recipeParser` | Parse recipes from PDF/URL/text using AI |
-| `visualGeneration` | Generate step images via Stable Diffusion |
 | `chefOllama` | Local LLM for cooking questions |
 | `recipeScaling` | Adjust quantities for different servings |
-| `dietaryAdaptation` | Handle allergies and dietary restrictions |
+| `recipeSearch` | Search all recipes across cookbooks (name/ingredient/tag) |
+| `shoppingList` | Consolidate ingredients from multiple recipes |
+| `substitutions` | Offline ingredient substitution suggestions |
 
 ## Documentation
 

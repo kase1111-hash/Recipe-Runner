@@ -1,5 +1,6 @@
 import { useReducer, useEffect, useCallback, useState } from 'react';
-import { ThemeProvider, KeyboardShortcutsProvider } from './contexts';
+import { ThemeProvider, KeyboardShortcutsProvider, useShortcut, useTheme } from './contexts';
+import { ShoppingListView } from './components/shopping/ShoppingListView';
 import { CookbookLibrary } from './components/cookbook/CookbookLibrary';
 import { BookshelfView } from './components/cookbook/BookshelfView';
 import { RecipeList, RecipeScaler, MiseEnPlace, CookCompletion, RecipeDetail } from './components/recipe';
@@ -30,7 +31,8 @@ type AppView =
   | 'groceries'
   | 'miseenplace'
   | 'cooking'
-  | 'complete';
+  | 'complete'
+  | 'shopping';
 
 interface AppState {
   initialized: boolean;
@@ -204,6 +206,19 @@ function appReducer(state: AppState, action: AppAction): AppState {
 }
 
 // ============================================
+// App-level Keyboard Shortcuts
+// ============================================
+
+// Must render inside KeyboardShortcutsProvider, so it can't live in App itself
+function AppShortcuts({ onHome, onEscape }: { onHome: () => void; onEscape: () => void }) {
+  const { toggleTheme } = useTheme();
+  useShortcut('nav-home', onHome, [onHome]);
+  useShortcut('nav-back', onEscape, [onEscape]);
+  useShortcut('general-theme', toggleTheme, [toggleTheme]);
+  return null;
+}
+
+// ============================================
 // App Component
 // ============================================
 
@@ -212,15 +227,26 @@ function App() {
 
   // Sync browser URL with app state for back-button and deep-linking
   useRouter(
-    { view: state.view, selectedCookbook: state.selectedCookbook, selectedRecipe: state.selectedRecipe },
+    {
+      view: state.view,
+      selectedCookbook: state.selectedCookbook,
+      selectedRecipe: state.selectedRecipe,
+      initialized: state.initialized,
+    },
     dispatch,
   );
 
   // Initialize database, seed sample data, and check for interrupted sessions
   useEffect(() => {
     async function init() {
-      await initializeDatabase();
-      await seedSampleData();
+      try {
+        await initializeDatabase();
+        await seedSampleData();
+      } catch (error) {
+        // A failed seed (quota, private-mode restrictions) must not strand
+        // the app on the loading screen — continue with whatever loaded
+        console.error('Initialization error:', error);
+      }
       dispatch({ type: 'INITIALIZE' });
       // Check for interrupted cooking sessions
       try {
@@ -366,6 +392,53 @@ function App() {
     dispatch({ type: 'SELECT_COOKBOOK', cookbook });
   }, []);
 
+  const handleOpenShopping = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', view: 'shopping' });
+  }, []);
+
+  const handleSelectSearchResult = useCallback((recipe: Recipe, cookbook: Cookbook) => {
+    dispatch({ type: 'SELECT_COOKBOOK', cookbook });
+    dispatch({ type: 'SELECT_RECIPE', recipe });
+  }, []);
+
+  // Escape mirrors each view's on-screen back button. Deliberately inert in
+  // 'edit' (a stray Escape must not discard an in-progress recipe edit) and
+  // 'complete' (user should choose Save or Done explicitly).
+  const handleEscape = useCallback(() => {
+    if (state.showChefOllama) {
+      dispatch({ type: 'CLOSE_CHEF' });
+      return;
+    }
+    if (state.showScaler) {
+      dispatch({ type: 'CLOSE_SCALER' });
+      return;
+    }
+    switch (state.view) {
+      case 'bookshelf':
+      case 'shopping':
+        dispatch({ type: 'NAVIGATE', view: 'library' });
+        break;
+      case 'cookbook':
+        dispatch({ type: 'BACK_TO_LIBRARY' });
+        break;
+      case 'detail':
+        dispatch({ type: 'BACK_TO_COOKBOOK' });
+        break;
+      case 'import':
+        dispatch({ type: 'NAVIGATE', view: 'cookbook' });
+        break;
+      case 'groceries':
+        dispatch({ type: 'NAVIGATE', view: 'detail' });
+        break;
+      case 'miseenplace':
+      case 'cooking':
+        dispatch({ type: 'NAVIGATE', view: 'groceries' });
+        break;
+      default:
+        break;
+    }
+  }, [state.view, state.showChefOllama, state.showScaler]);
+
   const handleResumeCooking = useCallback(async () => {
     if (!state.resumeSession) return;
     const session = state.resumeSession;
@@ -430,6 +503,7 @@ function App() {
   return (
     <ThemeProvider>
       <KeyboardShortcutsProvider>
+        <AppShortcuts onHome={handleBackToLibrary} onEscape={handleEscape} />
         <div style={{ minHeight: '100vh', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           {/* Offline Indicator */}
           {isOffline && (
@@ -510,7 +584,15 @@ function App() {
               <CookbookLibrary
                 onSelectCookbook={handleSelectCookbook}
                 onOpenBookshelf={handleOpenBookshelf}
+                onOpenShopping={handleOpenShopping}
+                onSelectSearchResult={handleSelectSearchResult}
               />
+            </ErrorBoundary>
+          )}
+
+          {state.view === 'shopping' && (
+            <ErrorBoundary resetLabel="Back to Library" onReset={handleBackToLibrary}>
+              <ShoppingListView onBack={handleBackToLibrary} />
             </ErrorBoundary>
           )}
 

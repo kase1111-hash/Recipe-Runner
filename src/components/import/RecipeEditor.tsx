@@ -231,6 +231,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     padding: '0.5rem',
                     border: '1px solid var(--border-secondary)',
                     borderRadius: '0.375rem',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-primary)',
                     fontSize: '1rem',
                   }}
                 />
@@ -248,6 +250,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     padding: '0.5rem',
                     border: '1px solid var(--border-secondary)',
                     borderRadius: '0.375rem',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-primary)',
                     fontSize: '1rem',
                     resize: 'vertical',
                   }}
@@ -267,6 +271,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       padding: '0.5rem',
                       border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text-primary)',
                     }}
                   />
                 </div>
@@ -283,6 +289,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       padding: '0.5rem',
                       border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text-primary)',
                     }}
                   />
                 </div>
@@ -299,6 +307,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       padding: '0.5rem',
                       border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text-primary)',
                     }}
                   />
                 </div>
@@ -324,8 +334,9 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     padding: '0.5rem',
                     border: '1px solid var(--border-secondary)',
                     borderRadius: '0.375rem',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-primary)',
                     fontSize: '0.875rem',
-                    background: 'var(--card-bg)',
                   }}
                 >
                   <option value="">Select course type...</option>
@@ -351,8 +362,9 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                     padding: '0.5rem',
                     border: '1px solid var(--border-secondary)',
                     borderRadius: '0.375rem',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-primary)',
                     fontSize: '0.875rem',
-                    background: 'var(--card-bg)',
                   }}
                 >
                   <option value="">Select cuisine...</option>
@@ -406,6 +418,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                 padding: '0.5rem',
                 border: '1px solid var(--border-secondary)',
                 borderRadius: '0.375rem',
+                background: 'var(--input-bg)',
+                color: 'var(--text-primary)',
               }}
             />
             <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
@@ -427,6 +441,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                 padding: '0.5rem',
                 border: '1px solid var(--border-secondary)',
                 borderRadius: '0.375rem',
+                background: 'var(--input-bg)',
+                color: 'var(--text-primary)',
               }}
             />
           </Card>
@@ -445,6 +461,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                 padding: '0.5rem',
                 border: '1px solid var(--border-secondary)',
                 borderRadius: '0.375rem',
+                background: 'var(--input-bg)',
+                color: 'var(--text-primary)',
                 resize: 'vertical',
               }}
             />
@@ -469,6 +487,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                         padding: '0.5rem',
                         border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
@@ -481,6 +501,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                         padding: '0.5rem',
                         border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
@@ -493,6 +515,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                         padding: '0.5rem',
                         border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
@@ -505,6 +529,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                         padding: '0.5rem',
                         border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
@@ -547,6 +573,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                         padding: '0.5rem',
                         border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
                       }}
                     />
                     <input
@@ -558,6 +586,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                         padding: '0.5rem',
                         border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
                       }}
                     />
                     <select
@@ -567,6 +597,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                         padding: '0.5rem',
                         border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
                       }}
                     >
                       <option value="active">Active</option>
@@ -583,6 +615,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       padding: '0.5rem',
                       border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text-primary)',
                       resize: 'vertical',
                     }}
                   />
@@ -598,6 +632,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                         padding: '0.5rem',
                         border: '1px solid var(--border-secondary)',
                         borderRadius: '0.375rem',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
                         resize: 'vertical',
                         fontSize: '0.875rem',
                       }}
@@ -612,6 +648,8 @@ export function RecipeEditor({ parsedRecipe, cookbook, onSave, onCancel }: Recip
                       padding: '0.5rem',
                       border: '1px solid var(--border-secondary)',
                       borderRadius: '0.375rem',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text-primary)',
                       fontSize: '0.875rem',
                     }}
                   />

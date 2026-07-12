@@ -243,11 +243,14 @@ export async function executeQuickAction(
 function parseActionsFromResponse(response: string): ChatResult['suggestedActions'] {
   const actions: ChatResult['suggestedActions'] = [];
 
-  // Look for modification suggestions in the response
+  // Look for modification suggestions in the response. Keywords must clearly
+  // signal a swap — a bare "use " matches nearly every cooking answer.
   if (
     response.toLowerCase().includes('substitute') ||
     response.toLowerCase().includes('instead of') ||
-    response.toLowerCase().includes('use ')
+    response.toLowerCase().includes('replace with') ||
+    response.toLowerCase().includes('swap in') ||
+    response.toLowerCase().includes('in place of')
   ) {
     actions.push(
       { type: 'just_this_time', label: 'Just This Time' },

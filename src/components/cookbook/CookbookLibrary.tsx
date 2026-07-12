@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Card, Button } from '../common';
 import { GeneralSettings } from '../settings/GeneralSettings';
+import { GlobalSearch } from '../search/GlobalSearch';
 import { ThemeToggle } from '../../contexts';
-import { getAllCookbooks } from '../../db';
-import type { Cookbook } from '../../types';
+import { getAllCookbooks, getShoppingListCount } from '../../db';
+import type { Cookbook, Recipe } from '../../types';
 
 interface CookbookLibraryProps {
   onSelectCookbook: (cookbook: Cookbook) => void;
   onOpenBookshelf?: () => void;
+  onOpenShopping?: () => void;
+  onSelectSearchResult?: (recipe: Recipe, cookbook: Cookbook) => void;
 }
 
 const categoryIcons: Record<string, string> = {
@@ -19,13 +22,22 @@ const categoryIcons: Record<string, string> = {
   craft: '🛠️',
 };
 
-export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookLibraryProps) {
+export function CookbookLibrary({
+  onSelectCookbook,
+  onOpenBookshelf,
+  onOpenShopping,
+  onSelectSearchResult,
+}: CookbookLibraryProps) {
   const [cookbooks, setCookbooks] = useState<Cookbook[]>([]);
   const [loading, setLoading] = useState(true);
   const [showVisualSettings, setShowVisualSettings] = useState(false);
+  const [shoppingCount, setShoppingCount] = useState(0);
 
   useEffect(() => {
     loadCookbooks();
+    getShoppingListCount()
+      .then(setShoppingCount)
+      .catch(() => {});
   }, []);
 
   async function loadCookbooks() {
@@ -95,6 +107,11 @@ export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookL
           <Button variant="ghost" onClick={() => setShowVisualSettings(true)} title="Visual Settings">
             ⚙️
           </Button>
+          {onOpenShopping && (
+            <Button variant="ghost" onClick={onOpenShopping} title="Shopping List">
+              🛒 Shopping{shoppingCount > 0 ? ` (${shoppingCount})` : ''}
+            </Button>
+          )}
           {onOpenBookshelf && (
             <Button variant="ghost" onClick={onOpenBookshelf} title="Organize Cookbooks">
               📚 Bookshelf
@@ -104,13 +121,20 @@ export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookL
         </div>
       </header>
 
+      {/* Global recipe search across every cookbook */}
+      {onSelectSearchResult && (
+        <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
+          <GlobalSearch onSelectResult={onSelectSearchResult} />
+        </div>
+      )}
+
       {cookbooks.length === 0 ? (
         <Card style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📚</div>
-          <h2 style={{ fontSize: '1.5rem', color: '#111827', margin: '0 0 0.5rem' }}>
+          <h2 style={{ fontSize: '1.5rem', color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>
             No Cookbooks Yet
           </h2>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--text-tertiary)', marginBottom: '1.5rem' }}>
             Create your first cookbook to get started
           </p>
           <Button>Create Cookbook</Button>
@@ -141,7 +165,7 @@ export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookL
                     width: '4rem',
                     height: '4rem',
                     borderRadius: '0.75rem',
-                    background: '#f3f4f6',
+                    background: 'var(--bg-tertiary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -169,7 +193,7 @@ export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookL
                     style={{
                       fontSize: '1.125rem',
                       fontWeight: 600,
-                      color: '#111827',
+                      color: 'var(--text-primary)',
                       margin: '0 0 0.25rem',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -181,7 +205,7 @@ export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookL
                   <p
                     style={{
                       fontSize: '0.875rem',
-                      color: '#6b7280',
+                      color: 'var(--text-tertiary)',
                       margin: 0,
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
@@ -202,9 +226,9 @@ export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookL
                       style={{
                         fontSize: '0.75rem',
                         padding: '0.125rem 0.5rem',
-                        background: '#f3f4f6',
+                        background: 'var(--bg-tertiary)',
                         borderRadius: '9999px',
-                        color: '#6b7280',
+                        color: 'var(--text-tertiary)',
                       }}
                     >
                       {cookbook.category}
@@ -213,7 +237,7 @@ export function CookbookLibrary({ onSelectCookbook, onOpenBookshelf }: CookbookL
                       <span
                         style={{
                           fontSize: '0.75rem',
-                          color: '#9ca3af',
+                          color: 'var(--text-muted)',
                         }}
                       >
                         by {cookbook.author}
