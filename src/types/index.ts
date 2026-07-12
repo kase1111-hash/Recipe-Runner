@@ -205,6 +205,18 @@ export interface TimerInstance {
   alertType: 'sound' | 'vibrate' | 'both';
 }
 
+export interface ShoppingListItem {
+  id: string;
+  item: string;
+  amount: string;              // raw amount string ("1 1/2"), '' for custom items
+  unit: string;
+  recipe_id: string | null;    // null for custom (user-typed) items
+  recipe_name: string | null;
+  checked: boolean;
+  custom: boolean;
+  added_at: string;            // ISO timestamp
+}
+
 export interface CookingSession {
   recipeId: string;
   cookbookId: string;

@@ -112,7 +112,8 @@ export function validateOllamaEndpoint(endpoint: string): { valid: boolean; isLo
       url.hostname === '::1' ||
       url.hostname.startsWith('192.168.') ||
       url.hostname.startsWith('10.') ||
-      url.hostname.startsWith('172.16.') ||
+      // RFC 1918 private block 172.16.0.0 – 172.31.255.255
+      /^172\.(1[6-9]|2\d|3[01])\./.test(url.hostname) ||
       url.hostname.endsWith('.local');
 
     if (!isLocal) {

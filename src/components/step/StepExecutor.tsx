@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Button, Timer, ProgressBar } from '../common';
 import { saveCookingSession, deleteCookingSession } from '../../db';
+import { useShortcut } from '../../contexts';
 import type { Recipe } from '../../types';
 
 interface StepExecutorProps {
@@ -65,17 +66,8 @@ export function StepExecutor({
     }
   }, [isFirstStep, isLastStep]);
 
-  // Guard against empty steps array
-  if (!currentStep) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <p>No steps available for this recipe.</p>
-        <Button onClick={onBack}>← Go Back</Button>
-      </div>
-    );
-  }
-
   function goToNextStep() {
+    if (!currentStep) return;
     if (isLastStep) {
       deleteCookingSession(recipe.id).catch(() => {});
       onComplete();
@@ -88,6 +80,23 @@ export function StepExecutor({
     if (!isFirstStep) {
       setCurrentStepIndex((prev) => prev - 1);
     }
+  }
+
+  // Keyboard shortcuts (definitions live in KeyboardShortcuts context).
+  // Registered before the empty-steps guard — hooks must not follow an
+  // early return.
+  useShortcut('cooking-next', goToNextStep, [currentStepIndex, isLastStep, recipe.id]);
+  useShortcut('cooking-prev', goToPreviousStep, [currentStepIndex, isFirstStep]);
+  useShortcut('cooking-chef', () => onOpenChef(currentStepIndex), [currentStepIndex, onOpenChef]);
+
+  // Guard against empty steps array
+  if (!currentStep) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <p>No steps available for this recipe.</p>
+        <Button onClick={onBack}>← Go Back</Button>
+      </div>
+    );
   }
 
   return (
@@ -233,6 +242,7 @@ export function StepExecutor({
         {currentStep.timer_default && (
           <div style={{ marginBottom: '1.5rem' }}>
             <Timer
+              key={currentStepIndex}
               defaultSeconds={currentStep.timer_default}
               onComplete={() => {
                 // Timer complete notification handled in Timer component

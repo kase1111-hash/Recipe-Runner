@@ -72,6 +72,9 @@ export function RecipeImport({ cookbook, onImportComplete, onCancel }: RecipeImp
 
   function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    // Clear the input so selecting the same file again re-fires onChange
+    // (e.g. after a validation error or failed extraction)
+    event.target.value = '';
     if (!file) return;
 
     // Validate file size (10 MB limit)

@@ -426,20 +426,18 @@ export const sampleRecipes: Recipe[] = [
 export async function seedSampleData(): Promise<void> {
   const { db } = await import('../db');
 
-  // Check if data already exists
-  const existingCookbooks = await db.cookbooks.count();
-  if (existingCookbooks > 0) {
-    console.log('Sample data already exists');
-    return;
-  }
+  // Run check + insert in one transaction so concurrent callers (StrictMode
+  // double-invokes the init effect; a second tab races the same way) can't
+  // both pass the count check and collide on the same primary keys
+  await db.transaction('rw', [db.cookbooks, db.recipes], async () => {
+    const existingCookbooks = await db.cookbooks.count();
+    if (existingCookbooks > 0) {
+      return;
+    }
 
-  // Add cookbook
-  await db.cookbooks.add(sampleCookbook);
-
-  // Add recipes
-  for (const recipe of sampleRecipes) {
-    await db.recipes.add(recipe);
-  }
-
-  console.log('Sample data seeded successfully');
+    // put() is idempotent on the fixed sample ids, unlike add()
+    await db.cookbooks.put(sampleCookbook);
+    await db.recipes.bulkPut(sampleRecipes);
+    console.log('Sample data seeded successfully');
+  });
 }

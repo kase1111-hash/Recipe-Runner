@@ -222,6 +222,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       root.style.setProperty(property, value);
     });
 
+    // Override the static base color/background from index.css — without this,
+    // text that doesn't set an explicit color inherits the hardcoded light
+    // value (#111827) and is unreadable on dark backgrounds
+    root.style.color = 'var(--text-primary)';
+    root.style.backgroundColor = 'var(--bg-secondary)';
+    root.style.colorScheme = effectiveTheme;
+
     // Also set a data attribute for components that need it
     root.setAttribute('data-theme', effectiveTheme);
 

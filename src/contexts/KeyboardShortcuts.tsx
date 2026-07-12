@@ -2,7 +2,7 @@
 // Keyboard Shortcuts System
 // Phase 10 Feature - Keyboard shortcuts for power users
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 
 // ============================================
 // Types
@@ -46,20 +46,6 @@ export const defaultShortcuts: Record<string, ShortcutDefinition> = {
     category: 'navigation',
   },
 
-  // Actions
-  'action-favorite': {
-    key: 'f',
-    modifiers: ['ctrl'],
-    description: 'Toggle favorite',
-    category: 'actions',
-  },
-  'action-share': {
-    key: 's',
-    modifiers: ['ctrl', 'shift'],
-    description: 'Share recipe',
-    category: 'actions',
-  },
-
   // Cooking
   'cooking-next': {
     key: 'ArrowRight',
@@ -71,14 +57,10 @@ export const defaultShortcuts: Record<string, ShortcutDefinition> = {
     description: 'Previous step',
     category: 'cooking',
   },
-  'cooking-timer': {
-    key: 't',
-    description: 'Start/pause timer',
-    category: 'cooking',
-  },
+  // Note: 'c', not '?' — '?' already requires Shift on US layouts, so a
+  // Shift+? chef shortcut was the same physical keystroke as the help modal
   'cooking-chef': {
-    key: '?',
-    modifiers: ['shift'],
+    key: 'c',
     description: 'Ask Chef Ollama',
     category: 'cooking',
   },
@@ -123,17 +105,19 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
   const [handlers, setHandlers] = useState<Record<string, () => void>>({});
   const [showHelp, setShowHelp] = useState(false);
 
-  function registerShortcut(id: string, handler: () => void) {
+  // Stable identities — these sit in useShortcut's effect deps, so fresh
+  // functions each render would re-register (and setState) in a loop
+  const registerShortcut = useCallback((id: string, handler: () => void) => {
     setHandlers((prev) => ({ ...prev, [id]: handler }));
-  }
+  }, []);
 
-  function unregisterShortcut(id: string) {
+  const unregisterShortcut = useCallback((id: string) => {
     setHandlers((prev) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [id]: _removed, ...rest } = prev;
       return rest;
     });
-  }
+  }, []);
 
   // Global keyboard event listener
   useEffect(() => {
@@ -294,7 +278,9 @@ function KeyboardShortcutsHelp({ onClose }: KeyboardShortcutsHelpProps) {
           </button>
         </div>
 
-        {Object.entries(categories).map(([category, title]) => (
+        {Object.entries(categories)
+          .filter(([category]) => shortcutsByCategory[category]?.length)
+          .map(([category, title]) => (
           <div key={category} style={{ marginBottom: '1.5rem' }}>
             <h3
               style={{
@@ -362,11 +348,16 @@ function KeyboardShortcutsHelp({ onClose }: KeyboardShortcutsHelpProps) {
 // ============================================
 
 export function useShortcut(id: string, handler: () => void, deps: unknown[] = []) {
-  const { registerShortcut, unregisterShortcut } = useKeyboardShortcuts();
+  // Tolerate a missing provider (unit tests render components standalone) —
+  // the shortcut simply doesn't register
+  const context = useContext(KeyboardShortcutsContext);
+  const registerShortcut = context?.registerShortcut;
+  const unregisterShortcut = context?.unregisterShortcut;
 
   useEffect(() => {
+    if (!registerShortcut || !unregisterShortcut) return;
     registerShortcut(id, handler);
     return () => unregisterShortcut(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, ...deps]);
+  }, [id, registerShortcut, unregisterShortcut, ...deps]);
 }

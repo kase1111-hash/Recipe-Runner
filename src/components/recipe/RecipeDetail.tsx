@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Button, Card, DifficultyBadge, ShareButton } from '../common';
 import { exportRecipe, downloadAsFile, copyToClipboard } from '../../services/export';
+import { addRecipeToShoppingList } from '../../services/shoppingList';
 import type { Recipe } from '../../types';
 import { CourseTypeLabels } from '../../types';
 
@@ -19,10 +20,23 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [showExport, setShowExport] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
+  const [shoppingMessage, setShoppingMessage] = useState('');
+
+  const handleAddToShoppingList = async () => {
+    try {
+      const count = await addRecipeToShoppingList(recipe);
+      setShoppingMessage(`Added ${count} ingredients to shopping list`);
+    } catch {
+      setShoppingMessage('Could not add to shopping list');
+    }
+    setTimeout(() => setShoppingMessage(''), 3000);
+  };
 
   const cookCount = recipe.cook_history.length;
-  const avgRating = cookCount > 0
-    ? recipe.cook_history.reduce((acc, h) => acc + h.rating, 0) / cookCount
+  // Unrated cooks (rating 0) shouldn't drag the average down
+  const ratings = recipe.cook_history.map((h) => h.rating).filter((r) => r > 0);
+  const avgRating = ratings.length > 0
+    ? ratings.reduce((acc, r) => acc + r, 0) / ratings.length
     : 0;
   const lastCooked = cookCount > 0
     ? new Date(recipe.cook_history[recipe.cook_history.length - 1].date)
@@ -132,12 +146,20 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem' }}>
             <DifficultyBadge score={recipe.difficulty} />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <Button variant="secondary" onClick={handleAddToShoppingList} title="Add all ingredients to your shopping list">
+                🛒 Add to Shopping List
+              </Button>
               <ShareButton recipe={recipe} />
               <Button onClick={onStartCooking}>
                 Start Cooking →
               </Button>
             </div>
+            {shoppingMessage && (
+              <div style={{ fontSize: '0.8125rem', color: 'var(--success)' }}>
+                {shoppingMessage}
+              </div>
+            )}
           </div>
         </div>
       </header>

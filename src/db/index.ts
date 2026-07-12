@@ -83,6 +83,7 @@ import type {
   CookHistory,
   Bookshelf,
   CourseType,
+  ShoppingListItem,
 } from '../types';
 
 // ============================================
@@ -96,6 +97,7 @@ export class RecipeRunnerDB extends Dexie {
   cookHistory!: Table<CookHistory & { id: string; recipe_id: string }>;
   imageCache!: Table<{ id: string; recipe_id: string; step_index: number; image_data: string | Blob; version: number; created_at: string }>;
   bookshelves!: Table<Bookshelf>;
+  shoppingList!: Table<ShoppingListItem>;
 
   constructor() {
     super('RecipeRunnerDB');
@@ -116,6 +118,17 @@ export class RecipeRunnerDB extends Dexie {
       cookHistory: 'id, recipe_id, date',
       imageCache: 'id, [recipe_id+step_index], created_at',
       bookshelves: 'id, name, sort_order, created_at, modified_at',
+    });
+
+    // Version 3: Add shopping list (multi-recipe consolidated grocery list)
+    this.version(3).stores({
+      cookbooks: 'id, title, category, bookshelf_id, created_at, modified_at',
+      recipes: 'id, cookbook_id, name, course_type, cuisine, [cookbook_id+name], [cookbook_id+course_type], [course_type+cuisine], created_at, modified_at, favorite',
+      cookingSessions: 'recipeId, cookbookId, startedAt',
+      cookHistory: 'id, recipe_id, date',
+      imageCache: 'id, [recipe_id+step_index], created_at',
+      bookshelves: 'id, name, sort_order, created_at, modified_at',
+      shoppingList: 'id, recipe_id, added_at',
     });
   }
 }
@@ -409,6 +422,49 @@ export async function getAllRecipesWithFavorites(): Promise<Recipe[]> {
 }
 
 // ============================================
+// Shopping List Operations
+// ============================================
+
+export async function addShoppingListItems(items: ShoppingListItem[]): Promise<void> {
+  return withErrorHandling('addShoppingListItems', async () => {
+    await db.shoppingList.bulkPut(items);
+  });
+}
+
+export async function getShoppingListItems(): Promise<ShoppingListItem[]> {
+  return withErrorHandling('getShoppingListItems', async () => {
+    return await db.shoppingList.orderBy('added_at').toArray();
+  });
+}
+
+export async function updateShoppingListItem(
+  id: string,
+  updates: Partial<ShoppingListItem>
+): Promise<number> {
+  return withErrorHandling('updateShoppingListItem', async () => {
+    return await db.shoppingList.update(id, updates);
+  });
+}
+
+export async function deleteShoppingListItems(ids: string[]): Promise<void> {
+  return withErrorHandling('deleteShoppingListItems', async () => {
+    await db.shoppingList.bulkDelete(ids);
+  });
+}
+
+export async function clearShoppingList(): Promise<void> {
+  return withErrorHandling('clearShoppingList', async () => {
+    await db.shoppingList.clear();
+  });
+}
+
+export async function getShoppingListCount(): Promise<number> {
+  return withErrorHandling('getShoppingListCount', async () => {
+    return await db.shoppingList.count();
+  });
+}
+
+// ============================================
 // Cooking Session Operations
 // ============================================
 
@@ -507,10 +563,13 @@ export async function getCachedStepImage(
   recipeId: string,
   stepIndex: number
 ): Promise<string | null> {
-  const cached = await db.imageCache
+  // Multiple versions can exist per step (regeneration) — return the latest,
+  // not whichever the index yields first
+  const versions = await db.imageCache
     .where('[recipe_id+step_index]')
     .equals([recipeId, stepIndex])
-    .first();
+    .toArray();
+  const cached = versions.sort((a, b) => b.version - a.version)[0];
 
   if (!cached) return null;
 

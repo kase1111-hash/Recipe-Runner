@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, Button, DifficultyBadge, FavoriteButton } from '../common';
+import { useShortcut } from '../../contexts';
 import { getRecipesByCookbook, getRecipeCountsByCourseType } from '../../db';
 import type { Cookbook, Recipe, CourseType } from '../../types';
 import { CourseTypeLabels } from '../../types';
@@ -22,10 +23,14 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterOption>('all');
   const [sortBy, setSortBy] = useState<SortOption>('name');
-  const [courseTypeFilter, setCourseTypeFilter] = useState<CourseType | 'all'>('all');
+  const [courseTypeFilter, setCourseTypeFilter] = useState<CourseType | 'all' | 'uncategorized'>('all');
   const [courseTypeCounts, setCourseTypeCounts] = useState<Record<string, number>>({});
   const [displayCount, setDisplayCount] = useState(RECIPES_PER_PAGE);
   const listRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // '/' focuses the search box
+  useShortcut('nav-search', () => searchInputRef.current?.focus(), []);
 
   const loadRecipes = useCallback(async () => {
     try {
@@ -64,8 +69,10 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
   const filteredRecipes = useMemo(() => {
     let result = [...recipes];
 
-    // Apply course type filter
-    if (courseTypeFilter !== 'all') {
+    // Apply course type filter ('uncategorized' = recipes with no course type)
+    if (courseTypeFilter === 'uncategorized') {
+      result = result.filter((recipe) => !recipe.course_type);
+    } else if (courseTypeFilter !== 'all') {
       result = result.filter((recipe) => recipe.course_type === courseTypeFilter);
     }
 
@@ -133,7 +140,9 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
   // Get active course types for the filter UI
   const activeCourseTypes = useMemo(() => {
     return Object.entries(courseTypeCounts)
-      .filter(([key, count]) => key !== 'all' && count > 0)
+      // 'uncategorized' has no CourseTypeLabels entry — it gets its own
+      // dedicated option below instead of a blank one here
+      .filter(([key, count]) => key !== 'all' && key !== 'uncategorized' && count > 0)
       .map(([key]) => key as CourseType);
   }, [courseTypeCounts]);
 
@@ -202,6 +211,7 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
             {/* Search Input */}
             <div style={{ flex: '1 1 300px' }}>
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Search recipes, ingredients, tags..."
                 value={searchQuery}
@@ -245,7 +255,7 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
             {/* Course Type Filter */}
             <select
               value={courseTypeFilter}
-              onChange={(e) => setCourseTypeFilter(e.target.value as CourseType | 'all')}
+              onChange={(e) => setCourseTypeFilter(e.target.value as CourseType | 'all' | 'uncategorized')}
               style={{
                 padding: '0.5rem 0.75rem',
                 border: '1px solid var(--input-border)',

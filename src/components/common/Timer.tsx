@@ -128,18 +128,20 @@ export function Timer({
     );
   }, [onComplete, onStateChange, label]);
 
+  // Track latest remaining time in a ref so the interval effect can capture
+  // "remaining at start" without depending on remainingSeconds (which would
+  // tear down and recreate the interval every tick)
+  const latestRemainingRef = useRef(remainingSeconds);
+  useEffect(() => {
+    latestRemainingRef.current = remainingSeconds;
+  }, [remainingSeconds]);
+
   useEffect(() => {
     if (state === 'running') {
       startTimeRef.current = Date.now();
-      remainingAtStartRef.current = remainingSeconds;
+      remainingAtStartRef.current = latestRemainingRef.current;
       intervalRef.current = window.setInterval(() => {
-        setRemainingSeconds((prev) => {
-          if (prev <= 1) {
-            handleComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
+        setRemainingSeconds((prev) => Math.max(0, prev - 1));
       }, 1000);
     }
 
@@ -154,7 +156,20 @@ export function Timer({
         clearInterval(intervalRef.current);
       }
     };
-  }, [state, handleComplete]);
+  }, [state]);
+
+  // Fire completion side effects (sound, vibration, notification) from an
+  // effect rather than inside the state updater — updaters must stay pure
+  // (StrictMode double-invokes them, which double-fired the alert)
+  useEffect(() => {
+    if (state === 'running' && remainingSeconds === 0) {
+      // The running→complete transition must happen exactly once per
+      // completion; firing it from the interval's updater double-triggered
+      // under StrictMode (updaters must stay pure)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      handleComplete();
+    }
+  }, [state, remainingSeconds, handleComplete]);
 
   // Handle page visibility for background timing
   useEffect(() => {
@@ -163,17 +178,14 @@ export function Timer({
         // Recalculate remaining time based on actual elapsed time since the timer interval started
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
         const newRemaining = Math.max(0, remainingAtStartRef.current - elapsed);
+        // Reaching 0 triggers the completion effect above
         setRemainingSeconds(newRemaining);
-
-        if (newRemaining === 0) {
-          handleComplete();
-        }
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [state, handleComplete]);
+  }, [state]);
 
   const start = () => {
     startTimeRef.current = Date.now();
@@ -184,8 +196,8 @@ export function Timer({
   const pause = () => {
     setState('paused');
     onStateChange?.('paused');
-    // Update total to remaining for accurate resume
-    setTotalSeconds(remainingSeconds);
+    // Keep totalSeconds untouched — overwriting it with remainingSeconds made
+    // the progress ring snap back to 0% and mislabeled the total time
   };
 
   const resume = () => {
@@ -215,6 +227,9 @@ export function Timer({
     setTotalSeconds(newTotal);
     if (state === 'idle') {
       setRemainingSeconds(newTotal);
+    } else if (state === 'paused') {
+      // Adjusting a paused timer shifts the countdown too, not just the total
+      setRemainingSeconds((prev) => Math.max(0, prev + delta));
     }
   };
 
