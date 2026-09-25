@@ -166,6 +166,29 @@ function scaleAmountText(amount: string, factor: number): string | null {
   return null;
 }
 
+// Count units whose spelling follows the quantity: scaling "1 cup" by 2 must
+// read "2 cups", and halving "2 cloves" must read "1 clove". Abbreviations
+// (tbsp, oz, g) don't change and aren't listed.
+const UNIT_FORMS: [singular: string, plural: string][] = [
+  ['cup', 'cups'], ['clove', 'cloves'], ['can', 'cans'], ['pint', 'pints'],
+  ['quart', 'quarts'], ['gallon', 'gallons'], ['pound', 'pounds'], ['ounce', 'ounces'],
+  ['tablespoon', 'tablespoons'], ['teaspoon', 'teaspoons'], ['slice', 'slices'],
+  ['stick', 'sticks'], ['sprig', 'sprigs'], ['bunch', 'bunches'], ['head', 'heads'],
+  ['package', 'packages'], ['pinch', 'pinches'], ['dash', 'dashes'], ['piece', 'pieces'],
+  ['handful', 'handfuls'], ['stalk', 'stalks'], ['leaf', 'leaves'], ['jar', 'jars'],
+  ['bottle', 'bottles'], ['bag', 'bags'], ['box', 'boxes'], ['loaf', 'loaves'],
+];
+
+function unitForQuantity(unit: string, scaledAmount: string): string {
+  const quantity = parseLeadingQuantity(scaledAmount);
+  if (!quantity) return unit;
+  const lower = unit.trim().toLowerCase();
+  const forms = UNIT_FORMS.find(([singular, plural]) => lower === singular || lower === plural);
+  if (!forms) return unit;
+  // A range reads by its upper end: "1-2 cups"
+  return quantity.high > 1 ? forms[1] : forms[0];
+}
+
 // ============================================
 // Scaling Logic
 // ============================================
@@ -196,8 +219,11 @@ export function scaleIngredient(
     }
   }
 
+  const unit = typeof ingredient.unit === 'string' ? ingredient.unit : '';
+
   return {
     ...ingredient,
+    ...(scaledAmount !== originalAmount && unit ? { unit: unitForQuantity(unit, scaledAmount) } : {}),
     originalAmount,
     scaledAmount,
     amount: scaledAmount,

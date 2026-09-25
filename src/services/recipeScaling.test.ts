@@ -448,3 +448,29 @@ describe('getScalingPresets', () => {
     expect(presets[3]).toEqual({ label: 'Double (8-12 servings)', value: 8 });
   });
 });
+
+describe('unit agreement after scaling', () => {
+  const ing = (amount: string, unit: string, item = 'flour'): Ingredient => ({ item, amount, unit, optional: false, substitutes: [] });
+
+  it('pluralizes count units when the scaled amount exceeds one', () => {
+    expect(scaleIngredient(ing('1', 'cup'), 2).unit).toBe('cups');
+    expect(scaleIngredient(ing('3/4', 'cup'), 2).unit).toBe('cups');
+    expect(scaleIngredient(ing('1', 'clove', 'garlic'), 1.5).unit).toBe('cloves');
+  });
+
+  it('singularizes when the scaled amount is one or less', () => {
+    expect(scaleIngredient(ing('2', 'cups'), 0.5).unit).toBe('cup');
+    expect(scaleIngredient(ing('2', 'cloves', 'garlic'), 0.25).unit).toBe('clove');
+  });
+
+  it('reads a range by its upper end', () => {
+    expect(scaleIngredient(ing('1/2-1', 'cup'), 2).unit).toBe('cups');
+  });
+
+  it('leaves abbreviations, unknown units and unscaled amounts alone', () => {
+    expect(scaleIngredient(ing('1', 'tbsp'), 2).unit).toBe('tbsp');
+    expect(scaleIngredient(ing('2', 'large', 'eggs'), 0.5).unit).toBe('large');
+    expect(scaleIngredient(ing('to taste', 'cup'), 2).unit).toBe('cup');
+    expect(scaleIngredient(ing('1', 'cup'), 1).unit).toBe('cup');
+  });
+});
