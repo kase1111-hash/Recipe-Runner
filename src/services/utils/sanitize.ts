@@ -42,9 +42,70 @@ export function sanitizeText(text: string): string {
   return div.innerHTML;
 }
 
+// Element names the HTML parser treats as real markup (HTML + SVG/MathML roots).
+// A "<" followed by anything else ("whisk <eggs>", "x<y", "< 5 min") is literal
+// recipe text and must survive stripping instead of being swallowed as a tag.
+const HTML_TAG_NAMES = new Set([
+  'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base', 'bdi', 'bdo',
+  'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code', 'col',
+  'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'dir', 'div', 'dl',
+  'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'font', 'footer', 'form', 'frame',
+  'frameset', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i',
+  'iframe', 'image', 'img', 'input', 'ins', 'kbd', 'keygen', 'label', 'legend', 'li', 'link',
+  'main', 'map', 'mark', 'marquee', 'math', 'menu', 'meta', 'meter', 'nav', 'noembed',
+  'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param',
+  'picture', 'plaintext', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp', 'script',
+  'search', 'section', 'select', 'slot', 'small', 'source', 'span', 'strike', 'strong', 'style',
+  'sub', 'summary', 'sup', 'svg', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th',
+  'thead', 'time', 'title', 'tr', 'track', 'tt', 'u', 'ul', 'var', 'video', 'wbr', 'xmp',
+]);
+
+// "<" plus what follows it, when that could start markup: an element name the
+// parser would accept as a tag ("<p>", "</div", "<img src"), or "<!" / "<?"
+// (comments, doctypes, bogus comments).
+const MARKUP_START = /<(?:(\/?)([a-zA-Z][a-zA-Z0-9-]*)(?=[\s/>])|([!?]))?/g;
+
+/**
+ * Entity-escape every "<" that does not begin real markup, so the HTML parser
+ * keeps it as text. Real tags are left alone for DOMPurify to remove.
+ */
+function escapeLiteralAngleBrackets(input: string): string {
+  return input.replace(
+    MARKUP_START,
+    (match: string, _slash: string | undefined, name: string | undefined, bang: string | undefined, offset: number) => {
+      // Markup with no closing ">" makes the parser drop everything to the end
+      // of the input, so treat it as text too.
+      const closed = input.indexOf('>', offset) !== -1;
+      const isMarkup = closed && (bang !== undefined || (name !== undefined && HTML_TAG_NAMES.has(name.toLowerCase())));
+      return isMarkup ? match : `&lt;${match.slice(1)}`;
+    }
+  );
+}
+
+function stripMarkup(input: string, decodeEntities: boolean): string {
+  // Preserving entities: escape "&" first so "&amp;" typed by a user comes back
+  // as "&amp;" rather than "&" (and so our own "&lt;" escapes are not doubled).
+  const prepared = escapeLiteralAngleBrackets(decodeEntities ? input : input.replace(/&/g, '&amp;'));
+
+  const sanitized = DOMPurify.sanitize(prepared, {
+    ALLOWED_TAGS: [], // Strip all HTML (script/style contents are dropped too)
+    ALLOWED_ATTR: [],
+  });
+
+  // SAFE: The input to innerHTML is already DOMPurify-cleaned with zero allowed
+  // tags/attrs, so all HTML has been stripped. A textarea parses its innerHTML
+  // as RCDATA (no elements), and textarea.value decodes the remaining entities
+  // (e.g. "&lt;" → "<") into plain text.
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = sanitized;
+  return textarea.value;
+}
+
 /**
  * Sanitize AI response that might contain markdown or HTML
- * Strips all HTML and returns plain text
+ * Strips all HTML tags and returns plain text. Stray "<" / ">" that are not
+ * part of a real tag ("cook until < 165°F", "whisk <eggs>") are kept.
+ * The result is plain text: render it as React text, never as HTML.
  * @param response AI-generated response
  * @returns Plain text with HTML stripped
  */
@@ -53,18 +114,28 @@ export function sanitizeAiResponse(response: string): string {
     return '';
   }
 
-  // First sanitize with DOMPurify
-  const sanitized = DOMPurify.sanitize(response, {
-    ALLOWED_TAGS: [], // Strip all HTML
-    ALLOWED_ATTR: [],
-  });
+  return stripMarkup(response, true);
+}
 
-  // SAFE: The input to innerHTML is already DOMPurify-cleaned with zero allowed
-  // tags/attrs, so all HTML has been stripped. We use textarea.value to decode
-  // any remaining HTML entities (e.g. "&amp;" → "&") into plain text.
-  const textarea = document.createElement('textarea');
-  textarea.innerHTML = sanitized;
-  return textarea.value;
+/**
+ * Strip HTML tags from user-supplied plain text (e.g. recipe fields received
+ * in a share link) while keeping every other character exactly as typed,
+ * including "&", entity-like text and stray "<" / ">".
+ * The result is plain text: render it as React text, never as HTML.
+ * @param text Untrusted plain text
+ * @returns The text with any HTML tags removed
+ */
+export function sanitizePlainText(text: string): string {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+
+  // Fast path: without "<" there is no markup to strip.
+  if (!text.includes('<')) {
+    return text;
+  }
+
+  return stripMarkup(text, false);
 }
 
 /**

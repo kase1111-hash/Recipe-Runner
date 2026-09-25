@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeHtml, sanitizeText, sanitizeAiResponse, sanitizeUrl } from './sanitize';
+import { sanitizeHtml, sanitizeText, sanitizeAiResponse, sanitizePlainText, sanitizeUrl } from './sanitize';
 
 describe('sanitizeHtml', () => {
   it('allows safe HTML tags', () => {
@@ -95,6 +95,62 @@ describe('sanitizeAiResponse', () => {
   it('returns empty string for null/undefined', () => {
     expect(sanitizeAiResponse(null as unknown as string)).toBe('');
     expect(sanitizeAiResponse(undefined as unknown as string)).toBe('');
+  });
+
+  it('keeps stray angle brackets that are not real tags', () => {
+    expect(sanitizeAiResponse('whisk <eggs>')).toBe('whisk <eggs>');
+    expect(sanitizeAiResponse('x<y and y>z')).toBe('x<y and y>z');
+    expect(sanitizeAiResponse('cook until < 165°F, then rest > 5 min')).toBe('cook until < 165°F, then rest > 5 min');
+    expect(sanitizeAiResponse('I <3 butter')).toBe('I <3 butter');
+  });
+
+  it('keeps text after an unclosed tag-like fragment', () => {
+    expect(sanitizeAiResponse('bring to <a rolling boil')).toBe('bring to <a rolling boil');
+  });
+
+  it('still strips real tags mixed with stray brackets', () => {
+    const result = sanitizeAiResponse('whisk <eggs> <b>well</b><script>alert(1)</script> until x<y');
+    expect(result).toBe('whisk <eggs> well until x<y');
+  });
+
+  it('strips tags regardless of case and attributes', () => {
+    const result = sanitizeAiResponse('a<SCRIPT type="text/javascript">steal()</SCRIPT>b<img src=x onerror="a>b">c');
+    expect(result).not.toContain('steal');
+    expect(result).not.toContain('onerror');
+    expect(result).not.toMatch(/<img/i);
+    expect(result).toContain('a');
+    expect(result).toContain('c');
+  });
+
+  it('strips comments', () => {
+    expect(sanitizeAiResponse('salt<!-- hidden -->pepper')).toBe('saltpepper');
+  });
+});
+
+describe('sanitizePlainText', () => {
+  it('returns plain text unchanged', () => {
+    const input = 'Fold in ½ cup flour — bake at 180°C (350°F) 🍰';
+    expect(sanitizePlainText(input)).toBe(input);
+  });
+
+  it('preserves ampersands and entity-looking text exactly', () => {
+    expect(sanitizePlainText('Salt & pepper')).toBe('Salt & pepper');
+    expect(sanitizePlainText('Tom &amp; Jerry <3')).toBe('Tom &amp; Jerry <3');
+  });
+
+  it('keeps stray angle brackets', () => {
+    expect(sanitizePlainText('whisk <eggs>')).toBe('whisk <eggs>');
+    expect(sanitizePlainText('x<y and y>z')).toBe('x<y and y>z');
+  });
+
+  it('removes real tags and script content', () => {
+    const result = sanitizePlainText('Chop <b>onions</b><script>alert("xss")</script> finely<iframe src="evil.com"></iframe>');
+    expect(result).toBe('Chop onions finely');
+  });
+
+  it('returns empty string for null/undefined', () => {
+    expect(sanitizePlainText(null as unknown as string)).toBe('');
+    expect(sanitizePlainText(undefined as unknown as string)).toBe('');
   });
 });
 
