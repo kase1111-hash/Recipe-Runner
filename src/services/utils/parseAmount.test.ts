@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { parseAmount, parseAmountWithUnit, formatAmount } from './parseAmount';
+import {
+  parseAmount,
+  parseAmountWithUnit,
+  parseQuantity,
+  parseLeadingQuantity,
+  findQuantity,
+  formatAmount,
+  formatQuantity,
+} from './parseAmount';
 
 describe('parseAmount', () => {
   describe('whole numbers', () => {
@@ -80,6 +88,164 @@ describe('parseAmount', () => {
       expect(parseAmount(null as unknown as string)).toBe(0);
       expect(parseAmount(undefined as unknown as string)).toBe(0);
     });
+  });
+
+  describe('stops at the end of the leading number', () => {
+    it('does not sum the two ends of a range', () => {
+      expect(parseAmount('2 to 3')).toBe(2);
+      expect(parseAmount('1 or 2')).toBe(1);
+      expect(parseAmount('1/2 to 3/4')).toBe(0.5);
+      expect(parseAmount('2-3')).toBe(2);
+      expect(parseAmount('2 - 3')).toBe(2);
+    });
+
+    it('reads a hyphenated mixed number as one number', () => {
+      expect(parseAmount('1-1/2')).toBe(1.5);
+      expect(parseAmount('2-3/4 cups')).toBe(2.75);
+    });
+
+    it('ignores trailing words and numbers', () => {
+      expect(parseAmount('2 cups')).toBe(2);
+      expect(parseAmount('2 (14 oz) cans')).toBe(2);
+      expect(parseAmount('2 3')).toBe(2);
+      expect(parseAmount('½ cup plus 1 tbsp')).toBe(0.5);
+    });
+
+    it('returns the default when the amount does not start with a number', () => {
+      expect(parseAmount('to taste')).toBe(0);
+      expect(parseAmount('about 2', 7)).toBe(7);
+    });
+
+    it('does not split a bare fraction into a mixed number', () => {
+      expect(parseAmount('11/2')).toBe(5.5);
+    });
+
+    it('treats a zero denominator as unparseable', () => {
+      expect(parseAmount('1/0', 3)).toBe(3);
+    });
+  });
+});
+
+describe('parseQuantity', () => {
+  it('parses single numbers with low === high', () => {
+    expect(parseQuantity('2')).toEqual({ low: 2, high: 2 });
+    expect(parseQuantity('1.5')).toEqual({ low: 1.5, high: 1.5 });
+    expect(parseQuantity('.5')).toEqual({ low: 0.5, high: 0.5 });
+    expect(parseQuantity('1/2')).toEqual({ low: 0.5, high: 0.5 });
+    expect(parseQuantity('1 1/2')).toEqual({ low: 1.5, high: 1.5 });
+    expect(parseQuantity('1-1/2')).toEqual({ low: 1.5, high: 1.5 });
+    expect(parseQuantity('½')).toEqual({ low: 0.5, high: 0.5 });
+    expect(parseQuantity('1½')).toEqual({ low: 1.5, high: 1.5 });
+    expect(parseQuantity('1 ½')).toEqual({ low: 1.5, high: 1.5 });
+    expect(parseQuantity('1,000')).toEqual({ low: 1000, high: 1000 });
+  });
+
+  it('tolerates surrounding whitespace, the fraction slash, and non-breaking spaces', () => {
+    expect(parseQuantity('  3  ')).toEqual({ low: 3, high: 3 });
+    expect(parseQuantity('1\u20442')).toEqual({ low: 0.5, high: 0.5 });
+    expect(parseQuantity('1\u00a01/2')).toEqual({ low: 1.5, high: 1.5 });
+  });
+
+  it('parses hyphen and dash ranges', () => {
+    expect(parseQuantity('2-3')).toEqual({ low: 2, high: 3 });
+    expect(parseQuantity('2 - 3')).toEqual({ low: 2, high: 3 });
+    expect(parseQuantity('2–3')).toEqual({ low: 2, high: 3 });
+    expect(parseQuantity('2—3')).toEqual({ low: 2, high: 3 });
+    expect(parseQuantity('1/2-3/4')).toEqual({ low: 0.5, high: 0.75 });
+    expect(parseQuantity('1-2 1/2')).toEqual({ low: 1, high: 2.5 });
+    expect(parseQuantity('1 1/2-2')).toEqual({ low: 1.5, high: 2 });
+  });
+
+  it('parses word ranges', () => {
+    expect(parseQuantity('2 to 3')).toEqual({ low: 2, high: 3 });
+    expect(parseQuantity('2 TO 3')).toEqual({ low: 2, high: 3 });
+    expect(parseQuantity('1/2 to 3/4')).toEqual({ low: 0.5, high: 0.75 });
+    expect(parseQuantity('2 or 3')).toEqual({ low: 2, high: 3 });
+    expect(parseQuantity('½ to ¾')).toEqual({ low: 0.5, high: 0.75 });
+    expect(parseQuantity('1 1/2 to 2 1/4')).toEqual({ low: 1.5, high: 2.25 });
+  });
+
+  it('returns null for anything that is not purely a number or range', () => {
+    expect(parseQuantity('to taste')).toBeNull();
+    expect(parseQuantity('a pinch')).toBeNull();
+    expect(parseQuantity('')).toBeNull();
+    expect(parseQuantity('   ')).toBeNull();
+    expect(parseQuantity('2 large')).toBeNull();
+    expect(parseQuantity('2 cups')).toBeNull();
+    expect(parseQuantity('about 2')).toBeNull();
+    expect(parseQuantity('2 3')).toBeNull();
+    expect(parseQuantity('2 tomatoes')).toBeNull();
+  });
+
+  it('rejects zero denominators and backwards ranges', () => {
+    expect(parseQuantity('1/0')).toBeNull();
+    expect(parseQuantity('3-2')).toBeNull();
+    expect(parseQuantity('1 - 1/2')).toBeNull();
+  });
+
+  it('handles null/undefined gracefully', () => {
+    expect(parseQuantity(null as unknown as string)).toBeNull();
+    expect(parseQuantity(undefined as unknown as string)).toBeNull();
+  });
+});
+
+describe('parseLeadingQuantity', () => {
+  it('splits a leading number from trailing text', () => {
+    expect(parseLeadingQuantity('2 large')).toEqual({ low: 2, high: 2, rest: ' large' });
+    expect(parseLeadingQuantity('1 1/2 (14 oz) cans')).toEqual({ low: 1.5, high: 1.5, rest: ' (14 oz) cans' });
+  });
+
+  it('keeps a leading range together', () => {
+    expect(parseLeadingQuantity('2-3 medium')).toEqual({ low: 2, high: 3, rest: ' medium' });
+    expect(parseLeadingQuantity('2 to 3 large')).toEqual({ low: 2, high: 3, rest: ' large' });
+  });
+
+  it('does not treat a word that starts with "to" as a range', () => {
+    expect(parseLeadingQuantity('2 tomatoes')).toEqual({ low: 2, high: 2, rest: ' tomatoes' });
+  });
+
+  it('returns null when there is no leading number', () => {
+    expect(parseLeadingQuantity('to taste')).toBeNull();
+    expect(parseLeadingQuantity('')).toBeNull();
+  });
+});
+
+describe('findQuantity', () => {
+  it('finds a number after leading words', () => {
+    expect(findQuantity('Serves 4')).toEqual({ low: 4, high: 4, before: 'Serves ', rest: '' });
+    expect(findQuantity('Makes 12 cookies')).toEqual({ low: 12, high: 12, before: 'Makes ', rest: ' cookies' });
+  });
+
+  it('finds ranges and mixed numbers', () => {
+    expect(findQuantity('4-6 servings')).toEqual({ low: 4, high: 6, before: '', rest: ' servings' });
+    expect(findQuantity('1 1/2 cups')).toEqual({ low: 1.5, high: 1.5, before: '', rest: ' cups' });
+  });
+
+  it('returns null when there is no number', () => {
+    expect(findQuantity('a family-sized portion')).toBeNull();
+  });
+});
+
+describe('formatQuantity', () => {
+  it('formats single numbers like formatAmount', () => {
+    expect(formatQuantity({ low: 2, high: 2 })).toBe('2');
+    expect(formatQuantity({ low: 1.5, high: 1.5 })).toBe('1 1/2');
+  });
+
+  it('formats simple ranges with a hyphen', () => {
+    expect(formatQuantity({ low: 4, high: 6 })).toBe('4-6');
+    expect(formatQuantity({ low: 0.5, high: 0.75 })).toBe('1/2-3/4');
+  });
+
+  it('uses "to" when either end is a mixed number', () => {
+    expect(formatQuantity({ low: 1, high: 1.5 })).toBe('1 to 1 1/2');
+    expect(formatQuantity({ low: 1.5, high: 2 })).toBe('1 1/2 to 2');
+  });
+
+  it('round-trips through parseQuantity', () => {
+    for (const q of [{ low: 4, high: 6 }, { low: 1, high: 1.5 }, { low: 0.5, high: 0.75 }, { low: 2.25, high: 3.5 }]) {
+      expect(parseQuantity(formatQuantity(q))).toEqual(q);
+    }
   });
 });
 

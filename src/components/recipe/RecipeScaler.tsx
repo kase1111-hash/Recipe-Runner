@@ -3,23 +3,50 @@
 
 import { useState, useMemo } from 'react';
 import { Button, Card } from '../common';
-import { scaleRecipe, parseYield, getScalingPresets } from '../../services/recipeScaling';
+import {
+  scaleRecipe,
+  parseYield,
+  getScalingPresets,
+  formatScaledYield,
+  resolveAppliedYieldValue,
+} from '../../services/recipeScaling';
 import type { Recipe } from '../../types';
 import type { ScaledRecipe, ScaledIngredient } from '../../services/recipeScaling';
 
 interface RecipeScalerProps {
+  /** The UNSCALED recipe - scaling is always computed from the original */
   recipe: Recipe;
+  /** Yield string currently applied (e.g. "8 servings"), to pre-select that scale */
+  appliedYield?: string;
   onApply: (scaledRecipe: ScaledRecipe) => void;
   onCancel: () => void;
 }
 
-export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
-  const currentYield = parseYield(recipe.yield);
-  const [targetYield, setTargetYield] = useState(currentYield.value);
-  const [customYield, setCustomYield] = useState('');
-  const [showCustom, setShowCustom] = useState(false);
+/** Float-safe comparison for yield values (presets are computed by multiplication) */
+function sameYield(a: number, b: number): boolean {
+  return Math.abs(a - b) < 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
+}
 
+/** Parse the custom yield field; null unless it's a positive, finite number */
+function parseCustomYield(text: string): number | null {
+  if (!text.trim()) return null;
+  const value = Number(text);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+export function RecipeScaler({ recipe, appliedYield, onApply, onCancel }: RecipeScalerProps) {
+  const currentYield = useMemo(() => parseYield(recipe.yield), [recipe.yield]);
   const presets = useMemo(() => getScalingPresets(recipe), [recipe]);
+
+  // Start on the scale that's currently applied, not always on "Original"
+  const initialTarget = resolveAppliedYieldValue(recipe, appliedYield);
+  const initialIsPreset = presets.some((preset) => sameYield(preset.value, initialTarget));
+  const [targetYield, setTargetYield] = useState(initialTarget);
+  const [customYield, setCustomYield] = useState(initialIsPreset ? '' : String(initialTarget));
+  const [showCustom, setShowCustom] = useState(!initialIsPreset);
+
+  const customValue = parseCustomYield(customYield);
+  const customInvalid = customYield.trim() !== '' && customValue === null;
 
   const scaledRecipe = useMemo(() => {
     return scaleRecipe(recipe, targetYield);
@@ -31,13 +58,13 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
   };
 
   const handleCustomSubmit = () => {
-    const value = parseFloat(customYield);
-    if (!isNaN(value) && value > 0) {
-      setTargetYield(value);
+    if (customValue !== null) {
+      setTargetYield(customValue);
     }
   };
 
   const scaleFactor = targetYield / currentYield.value;
+  const isApplied = appliedYield !== undefined && appliedYield !== recipe.yield;
 
   return (
     <div
@@ -74,9 +101,14 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
           >
             Scale Recipe
           </h2>
-          <p style={{ color: 'var(--text-tertiary)', margin: '0 0 1.5rem' }}>
+          <p style={{ color: 'var(--text-tertiary)', margin: isApplied ? '0 0 0.25rem' : '0 0 1.5rem' }}>
             Adjust the yield to automatically recalculate ingredients
           </p>
+          {isApplied && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0 0 1.5rem' }}>
+              Currently scaled to {appliedYield}
+            </p>
+          )}
 
           {/* Current vs Target */}
           <div
@@ -93,7 +125,7 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
                 Original
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>
-                {currentYield.value} {currentYield.unit}
+                {formatScaledYield(currentYield, currentYield.value)}
               </div>
             </div>
             <div style={{ fontSize: '1.5rem', color: 'var(--text-muted)' }}>→</div>
@@ -102,7 +134,7 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
                 Scaled
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
-                {targetYield} {currentYield.unit}
+                {formatScaledYield(currentYield, targetYield)}
               </div>
             </div>
           </div>
@@ -121,7 +153,7 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
               {scaleFactor === 1
                 ? 'Original recipe'
                 : scaleFactor > 1
-                ? `Scaling up ${scaleFactor.toFixed(2)}x`
+                ? `Scaling up ${Number(scaleFactor.toFixed(2))}x`
                 : `Scaling down to ${(scaleFactor * 100).toFixed(0)}%`}
             </span>
           </div>
@@ -138,7 +170,7 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
             {presets.map((preset) => (
               <Button
                 key={preset.value}
-                variant={targetYield === preset.value ? 'primary' : 'secondary'}
+                variant={sameYield(targetYield, preset.value) ? 'primary' : 'secondary'}
                 size="sm"
                 onClick={() => handlePresetClick(preset.value)}
               >
@@ -156,33 +188,45 @@ export function RecipeScaler({ recipe, onApply, onCancel }: RecipeScalerProps) {
 
           {/* Custom Input */}
           {showCustom && (
-            <div
-              style={{
-                display: 'flex',
-                gap: '0.5rem',
-                marginBottom: '1rem',
-              }}
-            >
-              <input
-                type="number"
-                min="0.1"
-                step="0.5"
-                value={customYield}
-                onChange={(e) => setCustomYield(e.target.value)}
-                placeholder={`Enter ${currentYield.unit}`}
+            <div style={{ marginBottom: '1rem' }}>
+              <div
                 style={{
-                  flex: 1,
-                  padding: '0.5rem 0.75rem',
-                  border: '1px solid var(--border-secondary)',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  background: 'var(--input-bg)',
-                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  gap: '0.5rem',
                 }}
-              />
-              <Button size="sm" onClick={handleCustomSubmit}>
-                Apply
-              </Button>
+              >
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  inputMode="decimal"
+                  value={customYield}
+                  onChange={(e) => setCustomYield(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCustomSubmit();
+                  }}
+                  placeholder={`Enter ${currentYield.unit}`}
+                  aria-label={`Custom yield in ${currentYield.unit}`}
+                  aria-invalid={customInvalid}
+                  style={{
+                    flex: 1,
+                    padding: '0.5rem 0.75rem',
+                    border: `1px solid ${customInvalid ? 'var(--error)' : 'var(--border-secondary)'}`,
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+                <Button size="sm" onClick={handleCustomSubmit} disabled={customValue === null}>
+                  Apply
+                </Button>
+              </div>
+              {customInvalid && (
+                <div role="alert" style={{ fontSize: '0.75rem', color: 'var(--error)', marginTop: '0.25rem' }}>
+                  Enter a number greater than 0
+                </div>
+              )}
             </div>
           )}
 

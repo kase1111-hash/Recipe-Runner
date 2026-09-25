@@ -260,6 +260,37 @@ describe('offline substitution fallback', () => {
     expect(result.response).toContain('applesauce');
   });
 
+  it('uses the full substitution database for recipe ingredients', async () => {
+    const recipeWithGarlic = {
+      ...mockRecipe,
+      ingredients: [{ item: 'garlic', amount: '2', unit: 'cloves', optional: false, substitutes: [] }],
+    };
+    const result = await chatWithChef('What can I substitute for garlic?', recipeWithGarlic, 0, []);
+
+    expect(result.response).toContain('For garlic');
+    expect(result.response).toContain('garlic powder');
+  });
+
+  it('finds the ingredient named in the question when the recipe spells it differently', async () => {
+    const recipeWithUnsalted = {
+      ...mockRecipe,
+      ingredients: [{ item: 'unsalted butter, softened', amount: '1', unit: 'cup', optional: false, substitutes: [] }],
+    };
+    const result = await chatWithChef("I don't have butter, what can I use?", recipeWithUnsalted, 0, []);
+
+    expect(result.response).toContain('coconut oil');
+  });
+
+  it('does not treat butternut squash as butter', async () => {
+    const recipeWithSquash = {
+      ...mockRecipe,
+      ingredients: [{ item: 'butternut squash', amount: '1', unit: '', optional: false, substitutes: [] }],
+    };
+    const result = await chatWithChef('What can I substitute for butternut squash?', recipeWithSquash, 0, []);
+
+    expect(result.response).not.toContain('coconut oil');
+  });
+
   it('returns generic message for unknown ingredient', async () => {
     const recipeWithUnknown: Recipe = {
       ...mockRecipe,

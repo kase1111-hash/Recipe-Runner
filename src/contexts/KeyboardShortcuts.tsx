@@ -2,7 +2,7 @@
 // Keyboard Shortcuts System
 // Phase 10 Feature - Keyboard shortcuts for power users
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 
 // ============================================
 // Types
@@ -19,6 +19,7 @@ interface KeyboardShortcutsContextType {
   shortcuts: Record<string, ShortcutDefinition>;
   registerShortcut: (id: string, handler: () => void) => void;
   unregisterShortcut: (id: string) => void;
+  pushEscapeHandler: (handler: () => void) => () => void;
   showHelp: boolean;
   setShowHelp: (show: boolean) => void;
 }
@@ -104,6 +105,18 @@ interface KeyboardShortcutsProviderProps {
 export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProviderProps) {
   const [handlers, setHandlers] = useState<Record<string, () => void>>({});
   const [showHelp, setShowHelp] = useState(false);
+  // Open modals push a close handler here; Escape closes the topmost one
+  // instead of falling through to the app-level "go back" navigation
+  const escapeStackRef = useRef<{ id: number; handler: () => void }[]>([]);
+  const nextEscapeIdRef = useRef(0);
+
+  const pushEscapeHandler = useCallback((handler: () => void) => {
+    const id = ++nextEscapeIdRef.current;
+    escapeStackRef.current.push({ id, handler });
+    return () => {
+      escapeStackRef.current = escapeStackRef.current.filter((entry) => entry.id !== id);
+    };
+  }, []);
 
   // Stable identities — these sit in useShortcut's effect deps, so fresh
   // functions each render would re-register (and setState) in a loop
@@ -122,16 +135,36 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
   // Global keyboard event listener
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      // Don't trigger shortcuts when typing in inputs
-      if (
+      if (event.defaultPrevented) return;
+
+      const inField =
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement
-      ) {
-        // Allow Escape to work in inputs
-        if (event.key !== 'Escape') {
+        event.target instanceof HTMLSelectElement;
+
+      if (event.key === 'Escape') {
+        // Escape closes the innermost layer first: the help modal, then any
+        // registered modal. Only with nothing open does it navigate back.
+        if (showHelp) {
+          event.preventDefault();
+          setShowHelp(false);
           return;
         }
+        const top = escapeStackRef.current[escapeStackRef.current.length - 1];
+        if (top) {
+          event.preventDefault();
+          top.handler();
+          return;
+        }
+        // In a text field Escape just leaves the field — navigating away
+        // would throw away whatever was being typed
+        if (inField) {
+          (event.target as HTMLElement).blur();
+          return;
+        }
+      } else if (inField) {
+        // Don't trigger shortcuts when typing in inputs
+        return;
       }
 
       // Find matching shortcut
@@ -177,7 +210,7 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handlers]);
+  }, [handlers, showHelp]);
 
   return (
     <KeyboardShortcutsContext.Provider
@@ -185,6 +218,7 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
         shortcuts: defaultShortcuts,
         registerShortcut,
         unregisterShortcut,
+        pushEscapeHandler,
         showHelp,
         setShowHelp,
       }}
@@ -236,6 +270,9 @@ function KeyboardShortcutsHelp({ onClose }: KeyboardShortcutsHelpProps) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Keyboard shortcuts"
       style={{
         position: 'fixed',
         inset: 0,
@@ -266,6 +303,7 @@ function KeyboardShortcutsHelp({ onClose }: KeyboardShortcutsHelpProps) {
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{
               border: 'none',
               background: 'none',
@@ -360,4 +398,24 @@ export function useShortcut(id: string, handler: () => void, deps: unknown[] = [
     return () => unregisterShortcut(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, registerShortcut, unregisterShortcut, ...deps]);
+}
+
+// ============================================
+// Hook for modals that should close on Escape
+// ============================================
+
+// While `active`, Escape calls onClose instead of the app's back navigation.
+// Nested modals stack: the most recently opened one closes first.
+export function useEscapeToClose(onClose: () => void, active: boolean = true) {
+  const context = useContext(KeyboardShortcutsContext);
+  const pushEscapeHandler = context?.pushEscapeHandler;
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!active || !pushEscapeHandler) return;
+    return pushEscapeHandler(() => onCloseRef.current());
+  }, [active, pushEscapeHandler]);
 }

@@ -16,19 +16,25 @@ export function DifficultyBadge({ score, showDetails = false }: DifficultyBadgeP
           alignItems: 'center',
           gap: '0.375rem',
           padding: '0.25rem 0.75rem',
-          background: `${label.color}15`,
-          color: label.color,
+          // The level color lives in the tint, border and dot; the label uses
+          // the theme's text color — amber/lime text on a near-white tint was
+          // unreadable (~1.6:1) in light mode
+          background: `${label.color}1f`,
+          border: `1px solid ${label.color}66`,
+          color: 'var(--text-primary)',
           borderRadius: '9999px',
           fontSize: '0.875rem',
           fontWeight: 600,
         }}
       >
         <span
+          aria-hidden="true"
           style={{
             width: '0.5rem',
             height: '0.5rem',
             borderRadius: '50%',
             background: label.color,
+            flexShrink: 0,
           }}
         />
         {label.label}

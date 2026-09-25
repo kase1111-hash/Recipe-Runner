@@ -190,7 +190,7 @@ export function exportRecipeAsMarkdown(recipe: Recipe, options?: ExportOptions):
   return md;
 }
 
-export function exportRecipeAsText(recipe: Recipe): string {
+export function exportRecipeAsText(recipe: Recipe, options?: ExportOptions): string {
   let text = `${'='.repeat(50)}\n`;
   text += `${recipe.name.toUpperCase()}\n`;
   text += `${'='.repeat(50)}\n\n`;
@@ -203,6 +203,14 @@ export function exportRecipeAsText(recipe: Recipe): string {
   text += `Total Time: ${recipe.total_time}\n`;
   text += `Active Time: ${recipe.active_time}\n`;
   text += `Difficulty: ${recipe.difficulty.overall}/5\n\n`;
+
+  if (recipe.safe_temp) {
+    text += `Safe Temperature: ${recipe.safe_temp.value}${recipe.safe_temp.unit}`;
+    if (recipe.safe_temp.location) {
+      text += ` (${recipe.safe_temp.location})`;
+    }
+    text += '\n\n';
+  }
 
   // Equipment
   if (recipe.equipment.length > 0) {
@@ -237,6 +245,16 @@ export function exportRecipeAsText(recipe: Recipe): string {
     text += '\n';
   }
 
+  // Notes
+  if (options?.includeNotes && recipe.notes) {
+    text += `NOTES\n${'-'.repeat(30)}\n${recipe.notes}\n\n`;
+  }
+
+  // Tags
+  if (recipe.tags.length > 0) {
+    text += `Tags: ${recipe.tags.join(', ')}\n`;
+  }
+
   return text;
 }
 
@@ -245,7 +263,7 @@ export function exportRecipe(recipe: Recipe, options: ExportOptions = { format: 
     case 'markdown':
       return exportRecipeAsMarkdown(recipe, options);
     case 'text':
-      return exportRecipeAsText(recipe);
+      return exportRecipeAsText(recipe, options);
     case 'json':
     default:
       return exportRecipeAsJSON(recipe, options);
@@ -307,6 +325,7 @@ export async function exportCookbookAsMarkdown(
 
 async function exportCookbookAsText(
   cookbook: Cookbook,
+  options?: ExportOptions
 ): Promise<string> {
   const recipes = await getRecipesByCookbook(cookbook.id);
 
@@ -320,7 +339,7 @@ async function exportCookbookAsText(
   text += `${'-'.repeat(50)}\n\n`;
 
   for (const recipe of recipes) {
-    text += exportRecipeAsText(recipe);
+    text += exportRecipeAsText(recipe, options);
     text += `${'-'.repeat(50)}\n\n`;
   }
 
@@ -335,7 +354,7 @@ export async function exportCookbook(
     case 'markdown':
       return await exportCookbookAsMarkdown(cookbook, options);
     case 'text':
-      return await exportCookbookAsText(cookbook);
+      return await exportCookbookAsText(cookbook, options);
     case 'json':
     default:
       return await exportCookbookAsJSON(cookbook, options);
@@ -360,8 +379,35 @@ export function downloadAsFile(content: string, filename: string, mimeType: stri
   URL.revokeObjectURL(url);
 }
 
-export function copyToClipboard(content: string): Promise<void> {
-  return navigator.clipboard.writeText(content);
+// navigator.clipboard only exists in secure contexts (https or localhost), so
+// a phone opening the app by LAN IP falls back to execCommand. Rejects when
+// neither path works — callers should surface that to the user.
+export async function copyToClipboard(content: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(content);
+      return;
+    } catch {
+      // Permission denied or document not focused — try the fallback
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = content;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } finally {
+    document.body.removeChild(textarea);
+  }
+  if (!copied) {
+    throw new Error('Clipboard is not available');
+  }
 }
 
 export function shareContent(title: string, text: string): Promise<void> {

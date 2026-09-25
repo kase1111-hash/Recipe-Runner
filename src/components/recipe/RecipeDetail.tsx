@@ -16,20 +16,32 @@ interface RecipeDetailProps {
 
 type Tab = 'overview' | 'ingredients' | 'history';
 
+/** Short-lived status line; errors are styled differently from successes */
+interface Feedback {
+  text: string;
+  isError: boolean;
+}
+
 export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [showExport, setShowExport] = useState(false);
-  const [exportMessage, setExportMessage] = useState('');
-  const [shoppingMessage, setShoppingMessage] = useState('');
+  const [exportMessage, setExportMessage] = useState<Feedback | null>(null);
+  const [shoppingMessage, setShoppingMessage] = useState<Feedback | null>(null);
 
   const handleAddToShoppingList = async () => {
     try {
-      const count = await addRecipeToShoppingList(recipe);
-      setShoppingMessage(`Added ${count} ingredients to shopping list`);
+      const { count, updated } = await addRecipeToShoppingList(recipe);
+      const noun = count === 1 ? 'ingredient' : 'ingredients';
+      setShoppingMessage({
+        text: updated
+          ? `Updated shopping list (${count} ${noun} from this recipe)`
+          : `Added ${count} ${noun} to shopping list`,
+        isError: false,
+      });
     } catch {
-      setShoppingMessage('Could not add to shopping list');
+      setShoppingMessage({ text: 'Could not add to shopping list', isError: true });
     }
-    setTimeout(() => setShoppingMessage(''), 3000);
+    setTimeout(() => setShoppingMessage(null), 3000);
   };
 
   const cookCount = recipe.cook_history.length;
@@ -48,15 +60,20 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
     const mimeType = format === 'json' ? 'application/json' : 'text/plain';
     const filename = `${recipe.name.toLowerCase().replace(/\s+/g, '-')}.${extension}`;
     downloadAsFile(content, filename, mimeType);
-    setExportMessage(`Downloaded ${filename}`);
-    setTimeout(() => setExportMessage(''), 3000);
+    setExportMessage({ text: `Downloaded ${filename}`, isError: false });
+    setTimeout(() => setExportMessage(null), 3000);
   };
 
   const handleCopyRecipe = async () => {
-    const content = exportRecipe(recipe, { format: 'text' });
-    await copyToClipboard(content);
-    setExportMessage('Copied to clipboard!');
-    setTimeout(() => setExportMessage(''), 3000);
+    try {
+      const content = exportRecipe(recipe, { format: 'text', includeNotes: true });
+      await copyToClipboard(content);
+      setExportMessage({ text: 'Copied to clipboard!', isError: false });
+    } catch {
+      // Clipboard API is missing on plain-http origins, or permission was denied
+      setExportMessage({ text: 'Could not copy to clipboard - try exporting as a file instead', isError: true });
+    }
+    setTimeout(() => setExportMessage(null), 4000);
   };
 
   return (
@@ -156,8 +173,11 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
               </Button>
             </div>
             {shoppingMessage && (
-              <div style={{ fontSize: '0.8125rem', color: 'var(--success)' }}>
-                {shoppingMessage}
+              <div
+                role={shoppingMessage.isError ? 'alert' : 'status'}
+                style={{ fontSize: '0.8125rem', color: shoppingMessage.isError ? 'var(--error)' : 'var(--success)' }}
+              >
+                {shoppingMessage.text}
               </div>
             )}
           </div>
@@ -323,16 +343,17 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
       {/* Export message */}
       {exportMessage && (
         <div
+          role={exportMessage.isError ? 'alert' : 'status'}
           style={{
             padding: '0.75rem',
-            background: 'var(--success-bg)',
-            color: 'var(--success-text)',
+            background: exportMessage.isError ? 'var(--error-bg)' : 'var(--success-bg)',
+            color: exportMessage.isError ? 'var(--error-text)' : 'var(--success-text)',
             borderRadius: '0.375rem',
             marginBottom: '1rem',
             fontSize: '0.875rem',
           }}
         >
-          ✓ {exportMessage}
+          {exportMessage.isError ? '⚠️' : '✓'} {exportMessage.text}
         </div>
       )}
 

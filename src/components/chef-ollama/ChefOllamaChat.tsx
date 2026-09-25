@@ -261,6 +261,9 @@ export function ChefOllamaChat({
                 borderRadius: '1rem',
                 background: message.role === 'user' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                 color: message.role === 'user' ? 'white' : 'var(--text-primary)',
+                // Keep line breaks from multi-line answers and the offline "\n\n• …" lists
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'break-word',
               }}
             >
               {message.content}

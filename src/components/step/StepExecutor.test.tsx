@@ -1,10 +1,19 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { StepExecutor } from './StepExecutor';
+import { saveCookingSession } from '../../db';
 import type { Recipe } from '../../types';
 
+const sound = vi.hoisted(() => ({ play: vi.fn(), stop: vi.fn(), unload: vi.fn() }));
+
 vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: vi.fn(), stop: vi.fn(), unload: vi.fn() })),
+  Howl: vi.fn(() => sound),
+}));
+
+vi.mock('../../db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../db')>()),
+  saveCookingSession: vi.fn().mockResolvedValue('session'),
+  deleteCookingSession: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockRecipe: Recipe = {
@@ -236,5 +245,137 @@ describe('StepExecutor', () => {
     fireEvent.click(screen.getByText('Next →'));
 
     expect(screen.getByText('⏳ Passive')).toBeInTheDocument();
+  });
+
+  describe('initial step and session saving', () => {
+    it('clamps a resumed step index past the end to the last step', () => {
+      // e.g. a session saved before the recipe was edited down to 3 steps
+      render(<StepExecutor {...defaultProps} initialStepIndex={7} />);
+
+      expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
+      expect(screen.getByText('Rest the chicken')).toBeInTheDocument();
+      expect(screen.queryByText('No steps available for this recipe.')).not.toBeInTheDocument();
+    });
+
+    it('clamps a negative step index to the first step', () => {
+      render(<StepExecutor {...defaultProps} initialStepIndex={-2} />);
+
+      expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    });
+
+    it('saves the session with the clamped index', () => {
+      render(<StepExecutor {...defaultProps} initialStepIndex={7} />);
+
+      expect(saveCookingSession).toHaveBeenCalledWith(
+        expect.objectContaining({ recipeId: 'test-1', currentStepIndex: 2 })
+      );
+    });
+
+    it('does not save a cooking session for a recipe with no steps', () => {
+      render(<StepExecutor {...defaultProps} recipe={{ ...mockRecipe, steps: [] }} />);
+
+      expect(screen.getByText('No steps available for this recipe.')).toBeInTheDocument();
+      expect(saveCookingSession).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('timers across step navigation', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function advance(ms: number) {
+      act(() => {
+        vi.advanceTimersByTime(ms);
+      });
+    }
+
+    // Step 2 ("Sear the chicken") has a 10-minute timer
+    function startSearTimer() {
+      fireEvent.click(screen.getByText('Next →'));
+      fireEvent.click(screen.getByText('▶ Start'));
+    }
+
+    it('keeps a running timer going in compact form after moving to the next step', () => {
+      render(<StepExecutor {...defaultProps} />);
+      startSearTimer();
+      advance(60_000);
+      expect(screen.getByText('09:00')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Next →'));
+      expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
+
+      // Step 2's timer is still there, labeled, and still counting
+      expect(screen.getByText('Step 2 · Sear the chicken')).toBeInTheDocument();
+      advance(1000);
+      expect(screen.getByText('08:59')).toBeInTheDocument();
+
+      // Step 3's own timer is shown at full size, untouched
+      expect(screen.getByText('10:00')).toBeInTheDocument();
+      expect(screen.getByText('▶ Start')).toBeInTheDocument();
+    });
+
+    it('a background timer still rings and can be silenced and cleared from the compact view', () => {
+      render(<StepExecutor {...defaultProps} />);
+      startSearTimer();
+      fireEvent.click(screen.getByText('Next →'));
+
+      advance(600_000);
+      expect(sound.play).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Stop alarm' }));
+      expect(sound.stop).toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reset timer' }));
+      expect(screen.queryByText('Step 2 · Sear the chicken')).not.toBeInTheDocument();
+    });
+
+    it('going back shows the same running timer at full size', () => {
+      render(<StepExecutor {...defaultProps} />);
+      startSearTimer();
+      advance(30_000);
+
+      fireEvent.click(screen.getByText('Next →'));
+      advance(30_000);
+      fireEvent.click(screen.getByText('← Previous'));
+
+      expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
+      expect(screen.getByText('09:00')).toBeInTheDocument();
+      expect(screen.getByText('⏸ Pause')).toBeInTheDocument();
+      // Back at full size, so it's no longer listed as another step's timer
+      expect(screen.queryByText('Step 2 · Sear the chicken')).not.toBeInTheDocument();
+    });
+
+    it('keeps a background timer on steps that have no timer of their own', () => {
+      render(<StepExecutor {...defaultProps} />);
+      startSearTimer();
+
+      fireEvent.click(screen.getByText('← Previous'));
+      expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+      expect(screen.getByText('Step 2 · Sear the chicken')).toBeInTheDocument();
+      expect(screen.queryByText('▶ Start')).not.toBeInTheDocument();
+    });
+
+    it('keeps paused timers but drops idle ones', () => {
+      render(<StepExecutor {...defaultProps} />);
+
+      // Visit step 2 without starting its timer
+      fireEvent.click(screen.getByText('Next →'));
+      fireEvent.click(screen.getByText('Next →'));
+      expect(screen.queryByText('Step 2 · Sear the chicken')).not.toBeInTheDocument();
+
+      // Start and pause step 3's timer, then move away
+      fireEvent.click(screen.getByText('▶ Start'));
+      advance(5000);
+      fireEvent.click(screen.getByText('⏸ Pause'));
+      fireEvent.click(screen.getByText('← Previous'));
+
+      expect(screen.getByText('Step 3 · Rest the chicken')).toBeInTheDocument();
+      expect(screen.getByText('09:55')).toBeInTheDocument();
+    });
   });
 });

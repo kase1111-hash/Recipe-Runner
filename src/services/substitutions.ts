@@ -365,26 +365,85 @@ const SUBSTITUTIONS: Record<string, { category: string; subs: Substitution[] }> 
 // Lookup Functions
 // ============================================
 
+// Bare names that should resolve to a more specific key. Only exact names
+// alias ("thyme" → fresh thyme), so "dried thyme" isn't offered dried thyme.
+const ALIASES: Record<string, string> = {
+  'thyme': 'fresh thyme',
+  'rosemary': 'fresh rosemary',
+  'basil': 'fresh basil',
+  'parsley': 'fresh parsley',
+  'cilantro': 'fresh cilantro',
+  'flour': 'all-purpose flour',
+  'breadcrumbs': 'bread crumbs',
+  'mayo': 'mayonnaise',
+};
+
+// Words that may follow the key without changing what the ingredient is
+// ("garlic cloves", "fresh basil leaves"); anything else after the key makes
+// it a different ingredient ("egg noodles", "sugar snap peas")
+const FORM_WORDS = new Set([
+  'leaf', 'leaves', 'sprig', 'sprigs', 'clove', 'cloves', 'stalk', 'stalks',
+  'bunch', 'bunches', 'head', 'heads', 'bulb', 'bulbs',
+]);
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Pre-compiled whole-word patterns, longest key first so the most specific
+// entry wins ("brown sugar" over "sugar", "cream cheese" over "cheese")
+const KEY_PATTERNS = Object.keys(SUBSTITUTIONS)
+  .sort((a, b) => b.length - a.length)
+  .map((key) => ({
+    key,
+    // Key as whole words, optional plural, then only form words to the end
+    pattern: new RegExp(`\\b${escapeRegExp(key)}(?:e?s)?((?:\\s+[a-z]+)*)$`),
+  }));
+
+// Strip prep notes and alternatives: "butter, softened" → "butter",
+// "large eggs (room temperature)" → "large eggs", "olive oil for frying" →
+// "olive oil", "butter or margarine" → "butter"
+function coreName(item: string): string {
+  return item
+    .toLowerCase()
+    .split(/[,(;]/)[0]
+    .split(/\s+(?:for|to|at|or)\s+/)[0]
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function resultFor(ingredient: Ingredient, key: string): SubstitutionResult {
+  return {
+    original: ingredient,
+    substitutes: SUBSTITUTIONS[key].subs,
+    category: SUBSTITUTIONS[key].category,
+  };
+}
+
 export function findSubstitutions(ingredient: Ingredient): SubstitutionResult | null {
   const itemLower = ingredient.item.toLowerCase().trim();
 
   // Direct match
   if (SUBSTITUTIONS[itemLower]) {
-    return {
-      original: ingredient,
-      substitutes: SUBSTITUTIONS[itemLower].subs,
-      category: SUBSTITUTIONS[itemLower].category,
-    };
+    return resultFor(ingredient, itemLower);
   }
 
-  // Partial match
-  for (const [key, data] of Object.entries(SUBSTITUTIONS)) {
-    if (itemLower.includes(key) || key.includes(itemLower)) {
-      return {
-        original: ingredient,
-        substitutes: data.subs,
-        category: data.category,
-      };
+  const name = coreName(ingredient.item);
+  if (!name) return null;
+
+  if (SUBSTITUTIONS[name]) return resultFor(ingredient, name);
+  const alias = ALIASES[name] ?? ALIASES[name.replace(/e?s$/, '')];
+  if (alias) return resultFor(ingredient, alias);
+
+  // Whole-word match on the ingredient's head noun, longest key first.
+  // Substring matching in either direction gave butter subs for "butternut
+  // squash", flax egg for "eggplant", and rice vinegar subs for "rice".
+  for (const { key, pattern } of KEY_PATTERNS) {
+    const match = pattern.exec(name);
+    if (!match) continue;
+    const trailing = match[1].trim().split(' ').filter(Boolean);
+    if (trailing.every((word) => FORM_WORDS.has(word))) {
+      return resultFor(ingredient, key);
     }
   }
 

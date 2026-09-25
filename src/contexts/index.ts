@@ -3,5 +3,6 @@ export {
   KeyboardShortcutsProvider,
   useKeyboardShortcuts,
   useShortcut,
+  useEscapeToClose,
   defaultShortcuts,
 } from './KeyboardShortcuts';

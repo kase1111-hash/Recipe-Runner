@@ -1,47 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, Button, ProgressBar } from '../common';
+import { copyToClipboard } from '../../services/export';
+import { categorizeIngredient, type IngredientCategory } from '../../services/ingredientCategories';
 import type { Recipe, Ingredient } from '../../types';
 
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  Produce: [
-    'onion', 'garlic', 'tomato', 'lettuce', 'pepper', 'carrot', 'celery',
-    'potato', 'mushroom', 'herb', 'basil', 'cilantro', 'parsley', 'lemon',
-    'lime', 'avocado', 'spinach', 'kale', 'broccoli', 'cucumber', 'zucchini',
-    'ginger',
-  ],
-  Proteins: [
-    'chicken', 'beef', 'pork', 'fish', 'salmon', 'shrimp', 'turkey', 'lamb',
-    'tofu', 'tempeh', 'sausage', 'bacon', 'steak', 'ground',
-  ],
-  Dairy: [
-    'milk', 'cream', 'cheese', 'butter', 'yogurt', 'egg', 'sour cream',
-    'parmesan', 'mozzarella', 'cheddar', 'ricotta',
-  ],
-  Pantry: [
-    'flour', 'sugar', 'salt', 'oil', 'vinegar', 'soy sauce', 'pasta', 'rice',
-    'bread', 'stock', 'broth', 'canned', 'tomato paste', 'honey', 'maple',
-    'vanilla', 'baking',
-  ],
-  Spices: [
-    'pepper', 'cumin', 'paprika', 'cinnamon', 'oregano', 'thyme', 'rosemary',
-    'chili', 'cayenne', 'nutmeg', 'turmeric', 'coriander', 'bay leaf', 'clove',
-  ],
+// Shopping-list sections; eggs sit with dairy as they do in most stores
+const GROCERY_SECTION: Record<IngredientCategory, string> = {
+  produce: 'Produce',
+  proteins: 'Proteins',
+  eggs: 'Dairy',
+  dairy: 'Dairy',
+  pantry: 'Pantry',
+  spices: 'Spices',
+  other: 'Other',
 };
-
-function categorizeIngredient(ingredient: Ingredient): string {
-  const text = `${ingredient.item} ${ingredient.prep ?? ''}`.toLowerCase();
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some((kw) => text.includes(kw))) {
-      return category;
-    }
-  }
-  return 'Other';
-}
 
 function formatShoppingList(recipe: Recipe): string {
   const grouped: Record<string, Ingredient[]> = {};
   for (const ing of recipe.ingredients) {
-    const cat = categorizeIngredient(ing);
+    const cat = GROCERY_SECTION[categorizeIngredient(ing.item)];
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(ing);
   }
@@ -64,12 +41,32 @@ function formatShoppingList(recipe: Recipe): string {
   return lines.join('\n').trimEnd();
 }
 
+// Map checked ingredient names (the onComplete format) back to row indices.
+// Each name claims one row, so a duplicated name ("butter" for crust and
+// filling) restores as many rows as it appears in the list.
+function indicesFromNames(ingredients: Ingredient[], names: string[]): Set<number> {
+  const normalize = (name: string) => name.trim().toLowerCase();
+  const result = new Set<number>();
+  for (const name of names) {
+    const idx = ingredients.findIndex(
+      (ing, i) => !result.has(i) && normalize(ing.item) === normalize(name)
+    );
+    if (idx !== -1) result.add(idx);
+  }
+  return result;
+}
+
 interface GroceryChecklistProps {
   recipe: Recipe;
+  // Receives the `item` name of every checked ingredient, in recipe order
+  // (one entry per checked row, so duplicate names repeat)
   onComplete: (checkedIngredients: string[]) => void;
   onBack: () => void;
   onOpenChef: (ingredient: Ingredient) => void;
   onOpenScaler?: () => void;
+  // Seeds the checklist, in the same format onComplete produces — e.g. when
+  // returning here from cooking
+  initialChecked?: string[];
 }
 
 export function GroceryChecklist({
@@ -78,12 +75,42 @@ export function GroceryChecklist({
   onBack,
   onOpenChef,
   onOpenScaler,
+  initialChecked,
 }: GroceryChecklistProps) {
   // Use index-based keys to handle duplicate ingredient names (e.g., "butter" for crust and filling)
-  const [checked, setChecked] = useState<Set<number>>(new Set());
-  const [copied, setCopied] = useState(false);
+  const [checked, setChecked] = useState<Set<number>>(() =>
+    indicesFromNames(recipe.ingredients, initialChecked ?? [])
+  );
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
 
-  const allChecked = checked.size === recipe.ingredients.length;
+  // Optional ingredients never block cooking — only required ones gate the
+  // Start button and count toward progress
+  const requiredIndices = recipe.ingredients
+    .map((ing, idx) => (ing.optional ? -1 : idx))
+    .filter((idx) => idx !== -1);
+  const requiredChecked = requiredIndices.filter((idx) => checked.has(idx)).length;
+  const requiredRemaining = requiredIndices.length - requiredChecked;
+  const hasOptional = requiredIndices.length < recipe.ingredients.length;
+  const canProceed = requiredRemaining === 0;
+
+  // Clear the copy feedback after a moment
+  useEffect(() => {
+    if (copyStatus === 'idle') return;
+    const timeout = setTimeout(() => setCopyStatus('idle'), copyStatus === 'failed' ? 4000 : 2000);
+    return () => clearTimeout(timeout);
+  }, [copyStatus]);
+
+  function handleCopy() {
+    const text = formatShoppingList(recipe);
+    // Starting from a resolved promise turns a synchronous throw (no
+    // Clipboard API on plain-http origins) into a rejection we can report
+    Promise.resolve()
+      .then(() => copyToClipboard(text))
+      .then(
+        () => setCopyStatus('copied'),
+        () => setCopyStatus('failed')
+      );
+  }
 
   function toggleIngredient(index: number) {
     // Functional update — rapid successive toggles batch into one render,
@@ -111,9 +138,13 @@ export function GroceryChecklist({
   }
 
   function handleProceed() {
-    if (allChecked) {
+    if (canProceed) {
       // Convert indices back to ingredient names for downstream consumers
-      onComplete(Array.from(checked).map((idx) => recipe.ingredients[idx].item));
+      onComplete(
+        recipe.ingredients
+          .filter((_, idx) => checked.has(idx))
+          .map((ing) => ing.item)
+      );
     }
   }
 
@@ -148,18 +179,8 @@ export function GroceryChecklist({
             )}
             {recipe.ingredients.length > 0 && (
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    const text = formatShoppingList(recipe);
-                    navigator.clipboard.writeText(text).then(() => {
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    });
-                  }}
-                >
-                  {copied ? 'Copied!' : 'Export List'}
+                <Button variant="secondary" size="sm" onClick={handleCopy}>
+                  {copyStatus === 'copied' ? 'Copied!' : copyStatus === 'failed' ? 'Copy failed' : 'Export List'}
                 </Button>
                 {typeof navigator !== 'undefined' && navigator.share && (
                   <Button
@@ -167,12 +188,21 @@ export function GroceryChecklist({
                     size="sm"
                     onClick={() => {
                       const text = formatShoppingList(recipe);
-                      navigator.share({ title: `Shopping List: ${recipe.name}`, text });
+                      // Dismissing the share sheet rejects — nothing to report
+                      navigator.share({ title: `Shopping List: ${recipe.name}`, text }).catch(() => {});
                     }}
                   >
                     Share
                   </Button>
                 )}
+              </div>
+            )}
+            {copyStatus === 'failed' && (
+              <div
+                role="alert"
+                style={{ fontSize: '0.75rem', color: 'var(--error)', marginTop: '0.25rem' }}
+              >
+                Couldn't copy to the clipboard
               </div>
             )}
           </div>
@@ -181,11 +211,11 @@ export function GroceryChecklist({
 
       <Card style={{ marginBottom: '1.5rem' }}>
         <ProgressBar
-          value={checked.size}
-          max={recipe.ingredients.length}
-          color={allChecked ? 'var(--success)' : 'var(--accent-primary)'}
+          value={requiredChecked}
+          max={requiredIndices.length}
+          color={canProceed ? 'var(--success)' : 'var(--accent-primary)'}
         />
-        {!allChecked && (
+        {!canProceed && (
           <p
             style={{
               marginTop: '0.75rem',
@@ -194,7 +224,9 @@ export function GroceryChecklist({
               textAlign: 'center',
             }}
           >
-            Check off all ingredients before cooking
+            {hasOptional
+              ? 'Check off all required ingredients before cooking (optional ones can be skipped)'
+              : 'Check off all ingredients before cooking'}
           </p>
         )}
       </Card>
@@ -216,6 +248,9 @@ export function GroceryChecklist({
               }}
             >
               <button
+                role="checkbox"
+                aria-checked={checked.has(idx)}
+                aria-label={`${[ingredient.amount, ingredient.unit, ingredient.item].filter(Boolean).join(' ')}${ingredient.optional ? ' (optional)' : ''}`}
                 onClick={() => toggleIngredient(idx)}
                 style={{
                   width: '1.5rem',
@@ -232,6 +267,7 @@ export function GroceryChecklist({
               >
                 {checked.has(idx) && (
                   <svg
+                    aria-hidden="true"
                     width="14"
                     height="14"
                     viewBox="0 0 24 24"
@@ -343,11 +379,13 @@ export function GroceryChecklist({
       >
         <Button
           onClick={handleProceed}
-          disabled={!allChecked}
+          disabled={!canProceed}
           size="lg"
           style={{ minWidth: '200px' }}
         >
-          {allChecked ? 'Start Cooking →' : `${recipe.ingredients.length - checked.size} items remaining`}
+          {canProceed
+            ? 'Start Cooking →'
+            : `${requiredRemaining} ${requiredRemaining === 1 ? 'item' : 'items'} remaining`}
         </Button>
       </div>
     </div>

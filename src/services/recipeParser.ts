@@ -35,6 +35,7 @@ export interface ParsedRecipe {
   notes: string;
   source: Source;
   confidence: number; // 0-1 confidence score
+  manual?: boolean; // Entered by hand rather than parsed by AI
 }
 
 export interface ParseProgress {
@@ -130,36 +131,68 @@ Recipe:
 `;
 
 // ============================================
+// Cancellation
+// ============================================
+
+/** True when an error came from an AbortSignal (e.g. the import screen was closed). */
+export function isAbortError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError';
+}
+
+function createAbortError(): Error {
+  const error = new Error('The import was cancelled.');
+  error.name = 'AbortError';
+  return error;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw createAbortError();
+}
+
+// ============================================
 // URL Fetching
 // ============================================
+
+// Direct page downloads almost never work in the browser: the app's Content
+// Security Policy only allows connections to localhost (for Ollama), and most
+// recipe sites don't allow cross-origin requests anyway. Say so plainly.
+const URL_FETCH_BLOCKED_MESSAGE =
+  "This app can't download recipe pages directly — your browser blocks it for most websites. " +
+  'Open the recipe in another tab, copy the ingredients and steps, and paste them into the Paste Text tab instead.';
+
+/** A URL fetch failure whose message is already written for the user */
+class RecipeUrlFetchError extends Error {}
 
 /**
  * Fetch a recipe URL directly. Third-party CORS proxies have been removed
  * because they can intercept, modify, and log all proxied traffic (MITM risk).
  * If direct fetch fails due to CORS, the user should paste text manually.
  */
-async function fetchRecipeUrl(url: string): Promise<Response> {
+async function fetchRecipeUrl(url: string, signal?: AbortSignal): Promise<Response> {
+  let response: Response;
   try {
-    const response = await fetch(url, {
+    response = await fetch(url, {
       headers: {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       },
+      signal,
     });
-    if (response.ok) {
-      return response;
-    }
-    throw new Error(`HTTP ${response.status}`);
-  } catch {
-    throw new Error(
-      'Could not fetch this URL. The website may block cross-origin requests. ' +
-      'Please copy and paste the recipe text instead, or use "Import from Text" or "Import from File".'
+  } catch (error) {
+    if (signal?.aborted || isAbortError(error)) throw createAbortError();
+    throw new RecipeUrlFetchError(URL_FETCH_BLOCKED_MESSAGE);
+  }
+  if (!response.ok) {
+    throw new RecipeUrlFetchError(
+      `Couldn't download that page (HTTP ${response.status}). ` +
+      'Copy the recipe text from the page and paste it into the Paste Text tab instead.'
     );
   }
+  return response;
 }
 
-async function fetchRecipeFromUrl(url: string): Promise<string> {
+async function fetchRecipeFromUrl(url: string, signal?: AbortSignal): Promise<string> {
   try {
-    const response = await fetchRecipeUrl(url);
+    const response = await fetchRecipeUrl(url, signal);
     const html = await response.text();
 
     // Extract text content from HTML
@@ -204,10 +237,9 @@ async function fetchRecipeFromUrl(url: string): Promise<string> {
 
     return content;
   } catch (error) {
-    if (error instanceof Error && (error.message.includes('Could not fetch') || error.message.includes('cross-origin'))) {
-      throw error; // Re-throw fetch errors with helpful message
-    }
-    throw new Error(`Failed to fetch recipe from URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    if (error instanceof RecipeUrlFetchError) throw error;
+    if (signal?.aborted || isAbortError(error)) throw createAbortError();
+    throw new Error(`Failed to read the recipe page: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -215,12 +247,38 @@ async function fetchRecipeFromUrl(url: string): Promise<string> {
 // AI Parsing with Ollama
 // ============================================
 
-async function callOllama(prompt: string, systemPrompt?: string): Promise<string> {
+const MANUAL_ENTRY_HINT = 'You can also enter the recipe manually.';
+
+/** Pull Ollama's own error text (e.g. "model not found") out of a failed response */
+async function readOllamaErrorDetail(response: Response): Promise<string> {
+  try {
+    const body = await response.json();
+    return typeof body?.error === 'string' ? body.error.slice(0, 200) : '';
+  } catch {
+    return '';
+  }
+}
+
+async function callOllama(prompt: string, systemPrompt?: string, signal?: AbortSignal): Promise<string> {
   const preferences = getPreferences();
   const config = preferences.ollama_config;
+  const endpoint = config.endpoint;
+  const timeoutMs = config.timeout_ms * 2; // Double timeout for parsing
+
+  throwIfAborted(signal);
+  if (!endpoint) {
+    throw new Error(`No Ollama address is set. Add one in Settings → AI Settings. ${MANUAL_ENTRY_HINT}`);
+  }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.timeout_ms * 2); // Double timeout for parsing
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  // Forward the caller's cancellation (e.g. the import screen closing) to the request
+  const onCallerAbort = () => controller.abort();
+  signal?.addEventListener('abort', onCallerAbort);
 
   try {
     const messages = [];
@@ -229,7 +287,7 @@ async function callOllama(prompt: string, systemPrompt?: string): Promise<string
     }
     messages.push({ role: 'user', content: prompt });
 
-    const response = await fetch(`${config.endpoint}/api/chat`, {
+    const response = await fetch(`${endpoint}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -245,17 +303,41 @@ async function callOllama(prompt: string, systemPrompt?: string): Promise<string
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama request failed: ${response.status}`);
+      const detail = await readOllamaErrorDetail(response);
+      throw new Error(
+        `Ollama at ${endpoint} returned an error (HTTP ${response.status})${detail ? `: ${detail}` : ''}. ` +
+        // 404 is what Ollama sends for a model that hasn't been pulled
+        (response.status === 404 ? 'Check the model name in Settings → AI Settings. ' : '') +
+        MANUAL_ENTRY_HINT
+      );
     }
 
     const data = await response.json();
     return data.message?.content || data.response || '';
+  } catch (error) {
+    // Translate raw browser errors ("Failed to fetch", "signal is aborted
+    // without reason") into something the user can act on
+    if (signal?.aborted) throw createAbortError();
+    if (timedOut) {
+      throw new Error(
+        `Ollama at ${endpoint} didn't respond within ${Math.round(timeoutMs / 1000)} seconds. ` +
+        'The model may still be loading — try again, or raise the timeout in Settings → AI Settings. ' +
+        MANUAL_ENTRY_HINT
+      );
+    }
+    if (error instanceof TypeError) {
+      // fetch() rejects with a TypeError when the server can't be reached
+      // (connection refused, CORS/CSP block, bad address)
+      throw new Error(`Couldn't reach Ollama at ${endpoint} — is it running? ${MANUAL_ENTRY_HINT}`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
+    signal?.removeEventListener('abort', onCallerAbort);
   }
 }
 
-function extractJSON(text: string): unknown {
+export function extractJSON(text: string): unknown {
   // Try to find JSON in the response — either an object or a top-level array
   // (generateVisualPrompts asks the model for a bare JSON array)
   const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
@@ -263,11 +345,12 @@ function extractJSON(text: string): unknown {
     try {
       return JSON.parse(jsonMatch[0]);
     } catch {
-      // Try to fix common JSON issues
+      // Repair trailing commas, the most common model mistake. Quotes are left
+      // alone: rewriting ' to " breaks any value containing an apostrophe
+      // ("Grandma's", "don't overmix").
       const fixed = jsonMatch[0]
         .replace(/,\s*}/g, '}')
-        .replace(/,\s*]/g, ']')
-        .replace(/'/g, '"');
+        .replace(/,\s*]/g, ']');
       return JSON.parse(fixed);
     }
   }
@@ -280,8 +363,10 @@ function extractJSON(text: string): unknown {
 
 export async function parseRecipeFromText(
   text: string,
-  onProgress?: (progress: ParseProgress) => void
+  onProgress?: (progress: ParseProgress) => void,
+  signal?: AbortSignal
 ): Promise<ParsedRecipe> {
+  throwIfAborted(signal);
   onProgress?.({ stage: 'extracting', message: 'Analyzing recipe content...', progress: 10 });
 
   // Cap input length to prevent abuse and reduce prompt injection surface
@@ -290,7 +375,7 @@ export async function parseRecipeFromText(
 
   // Wrap user content in delimiters to reduce prompt injection risk
   const extractionPrompt = RECIPE_EXTRACTION_PROMPT + `<user_content>\n${truncatedText}\n</user_content>`;
-  const extractionResult = await callOllama(extractionPrompt);
+  const extractionResult = await callOllama(extractionPrompt, undefined, signal);
 
   onProgress?.({ stage: 'structuring', message: 'Structuring recipe data...', progress: 40 });
 
@@ -317,28 +402,36 @@ export async function parseRecipeFromText(
 
     // Normalize and validate the parsed data
     parsed = {
-      name: extracted.name || 'Untitled Recipe',
-      description: extracted.description || '',
-      total_time: extracted.total_time || 'Unknown',
-      active_time: extracted.active_time || 'Unknown',
-      yield: extracted.yield || 'Unknown',
+      name: asText(extracted.name) || 'Untitled Recipe',
+      description: asText(extracted.description),
+      total_time: asText(extracted.total_time) || 'Unknown',
+      active_time: asText(extracted.active_time) || 'Unknown',
+      yield: asText(extracted.yield) || 'Unknown',
       safe_temp: safeTemp,
-      equipment: Array.isArray(extracted.equipment) ? extracted.equipment : [],
-      tags: Array.isArray(extracted.tags) ? extracted.tags : [],
-      ingredients: normalizeIngredients(extracted.ingredients || []),
-      steps: normalizeSteps(extracted.steps || []),
-      notes: extracted.notes || '',
+      equipment: normalizeStringList(extracted.equipment),
+      tags: normalizeStringList(extracted.tags),
+      ingredients: normalizeIngredients(extracted.ingredients),
+      steps: normalizeSteps(extracted.steps),
+      notes: asText(extracted.notes),
       source: { type: 'original' },
       confidence,
     };
+
+    // Nothing recipe-shaped came back — flag it for careful review
+    if (parsed.ingredients.length === 0 && parsed.steps.length === 0) {
+      parsed.confidence = Math.min(parsed.confidence, 0.3);
+    }
   } catch (error) {
-    throw new Error(`Failed to parse recipe data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Ollama's reply couldn't be read as a recipe (${error instanceof Error ? error.message : 'unknown error'}). ` +
+      `Try again, or enter the recipe manually.`
+    );
   }
 
   onProgress?.({ stage: 'generating_prompts', message: 'Generating visual prompts...', progress: 60 });
 
   // Generate visual prompts for each step
-  parsed.steps = await generateVisualPrompts(parsed.steps);
+  parsed.steps = await generateVisualPrompts(parsed.steps, signal);
 
   onProgress?.({ stage: 'complete', message: 'Recipe parsed successfully!', progress: 100 });
 
@@ -347,17 +440,20 @@ export async function parseRecipeFromText(
 
 export async function parseRecipeFromUrl(
   url: string,
-  onProgress?: (progress: ParseProgress) => void
+  onProgress?: (progress: ParseProgress) => void,
+  signal?: AbortSignal
 ): Promise<ParsedRecipe> {
   onProgress?.({ stage: 'fetching', message: 'Fetching recipe from URL...', progress: 5 });
 
-  const content = await fetchRecipeFromUrl(url);
+  const content = await fetchRecipeFromUrl(url, signal);
 
   if (!content || content.length < 100) {
-    throw new Error('Could not extract recipe content from URL');
+    throw new Error(
+      "Couldn't find a recipe on that page. Copy the recipe text and paste it into the Paste Text tab instead."
+    );
   }
 
-  const parsed = await parseRecipeFromText(content, onProgress);
+  const parsed = await parseRecipeFromText(content, onProgress, signal);
 
   // Set the source
   parsed.source = {
@@ -369,12 +465,58 @@ export async function parseRecipeFromUrl(
 }
 
 // ============================================
+// Manual Entry
+// ============================================
+
+export function createBlankIngredient(): Ingredient {
+  return { item: '', amount: '', unit: '', prep: null, optional: false, substitutes: [] };
+}
+
+export function createBlankStep(index: number): Step {
+  return {
+    index,
+    title: '',
+    instruction: '',
+    time_minutes: 0,
+    time_display: '',
+    type: 'active',
+    tip: null,
+    visual_prompt: '',
+    temperature: null,
+    timer_default: null,
+  };
+}
+
+/** An empty recipe for the editor, so recipes can be added without Ollama */
+export function createBlankRecipe(): ParsedRecipe {
+  return {
+    name: '',
+    description: '',
+    total_time: '',
+    active_time: '',
+    yield: '',
+    safe_temp: null,
+    equipment: [],
+    tags: [],
+    ingredients: [createBlankIngredient()],
+    steps: [createBlankStep(0)],
+    notes: '',
+    source: { type: 'original' },
+    confidence: 1,
+    manual: true,
+  };
+}
+
+// ============================================
 // Visual Prompt Generation
 // ============================================
 
 async function generateVisualPrompts(
   steps: Step[],
+  signal?: AbortSignal
 ): Promise<Step[]> {
+  if (steps.length === 0) return steps;
+
   const stepsText = steps
     .map((s, i) => `Step ${i + 1}: "${s.title}" - ${s.instruction}`)
     .join('\n');
@@ -382,16 +524,18 @@ async function generateVisualPrompts(
   const prompt = VISUAL_PROMPT_GENERATION + stepsText + '\n\nReturn a JSON array of visual_prompt strings, one for each step:';
 
   try {
-    const result = await callOllama(prompt);
-    const prompts = extractJSON(result) as string[];
+    const result = await callOllama(prompt, undefined, signal);
+    const prompts = findPromptArray(extractJSON(result));
 
-    if (Array.isArray(prompts)) {
+    if (prompts) {
       return steps.map((step, i) => ({
         ...step,
-        visual_prompt: prompts[i] || generateDefaultVisualPrompt(step),
+        visual_prompt: coerceVisualPrompt(prompts[i]) || generateDefaultVisualPrompt(step),
       }));
     }
   } catch (error) {
+    // A cancelled import must stop here rather than carry on with defaults
+    if (signal?.aborted || isAbortError(error)) throw createAbortError();
     console.warn('Failed to generate visual prompts, using defaults:', error);
   }
 
@@ -400,6 +544,28 @@ async function generateVisualPrompts(
     ...step,
     visual_prompt: generateDefaultVisualPrompt(step),
   }));
+}
+
+/** Accept a bare array, or an object wrapping one ({ "visual_prompts": [...] }) */
+function findPromptArray(value: unknown): unknown[] | null {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') {
+    const nested = Object.values(value).find(Array.isArray);
+    if (nested) return nested;
+  }
+  return null;
+}
+
+/** Models sometimes return { "visual_prompt": "..." } objects instead of strings */
+function coerceVisualPrompt(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    for (const key of ['visual_prompt', 'prompt', 'description', 'text']) {
+      if (typeof obj[key] === 'string') return (obj[key] as string).trim();
+    }
+  }
+  return '';
 }
 
 function generateDefaultVisualPrompt(step: Step): string {
@@ -447,40 +613,76 @@ Steps: ${recipe.steps.map(s => s.instruction).join(' ')}
 // Data Normalization
 // ============================================
 
-function normalizeIngredients(ingredients: unknown[]): Ingredient[] {
-  return ingredients.map((ing: unknown) => {
+/** Return the first non-empty string among the candidates */
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+/** A trimmed string for text fields; models occasionally send numbers (yield: 4) or objects */
+function asText(value: unknown): string {
+  return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
+}
+
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(asText).filter(Boolean);
+}
+
+export function normalizeIngredients(ingredients: unknown): Ingredient[] {
+  if (!Array.isArray(ingredients)) return [];
+  return ingredients.flatMap((ing: unknown): Ingredient[] => {
+    // Some models return plain strings ("2 cups flour") instead of objects
+    if (typeof ing === 'string' || typeof ing === 'number') {
+      const item = String(ing).trim();
+      return item ? [{ ...createBlankIngredient(), item }] : [];
+    }
+    if (!ing || typeof ing !== 'object') return [];
+
     const i = ing as Record<string, unknown>;
-    return {
-      item: String(i.item || i.name || 'Unknown'),
-      amount: String(i.amount || i.quantity || ''),
-      unit: String(i.unit || ''),
-      prep: i.prep ? String(i.prep) : null,
+    return [{
+      item: asText(i.item) || asText(i.name) || asText(i.ingredient) || 'Unknown',
+      amount: asText(i.amount) || asText(i.quantity),
+      unit: asText(i.unit),
+      prep: asText(i.prep) || null,
       optional: Boolean(i.optional),
       substitutes: Array.isArray(i.substitutes) ? i.substitutes.map(String) : [],
-    };
+    }];
   });
 }
 
-function normalizeSteps(steps: unknown[]): Step[] {
-  return steps.map((step: unknown, index: number) => {
-    const s = step as Record<string, unknown>;
+export function normalizeSteps(steps: unknown): Step[] {
+  if (!Array.isArray(steps)) return [];
+
+  // Some models return plain instruction strings instead of step objects
+  const stepObjects = steps.flatMap((step: unknown): Record<string, unknown>[] => {
+    if (typeof step === 'string') return step.trim() ? [{ instruction: step.trim() }] : [];
+    return step && typeof step === 'object' ? [step as Record<string, unknown>] : [];
+  });
+
+  return stepObjects.map((s, index) => {
     const timeMinutes = parseTimeToMinutes(s.time_minutes || s.time || s.time_display);
+    const explicitTimer = Number(s.timer_default);
 
     return {
       index,
-      title: String(s.title || `Step ${index + 1}`),
-      instruction: String(s.instruction || s.instructions || s.text || ''),
+      title: firstString(s.title, s.name) || `Step ${index + 1}`,
+      instruction: firstString(s.instruction, s.instructions, s.text, s.step, s.description),
       time_minutes: timeMinutes,
       time_display: formatMinutes(timeMinutes),
       type: (s.type === 'passive' ? 'passive' : 'active') as 'active' | 'passive',
-      tip: s.tip ? String(s.tip) : null,
-      visual_prompt: String(s.visual_prompt || ''),
-      temperature: s.temperature ? {
+      tip: asText(s.tip) || null,
+      visual_prompt: coerceVisualPrompt(s.visual_prompt),
+      temperature: s.temperature && typeof s.temperature === 'object' ? {
         value: Number((s.temperature as Record<string, unknown>).value) || 0,
         unit: normalizeTemperatureUnit((s.temperature as Record<string, unknown>).unit),
         target: (s.temperature as Record<string, unknown>).target ? String((s.temperature as Record<string, unknown>).target) : undefined,
       } : null,
-      timer_default: s.timer_default ? Number(s.timer_default) : (timeMinutes > 0 ? timeMinutes * 60 : null),
+      timer_default: Number.isFinite(explicitTimer) && explicitTimer > 0
+        ? Math.round(explicitTimer)
+        : timerSecondsFor(timeMinutes),
     };
   });
 }
@@ -491,27 +693,54 @@ function normalizeTemperatureUnit(rawUnit: unknown): '°F' | '°C' {
   return /c/i.test(String(rawUnit)) ? '°C' : '°F';
 }
 
-function parseTimeToMinutes(time: unknown): number {
-  if (typeof time === 'number') return time;
+/** Round to whole minutes, keeping anything under a minute (e.g. "30 sec") as 1 */
+function toWholeMinutes(minutes: number): number {
+  if (!Number.isFinite(minutes) || minutes <= 0) return 0;
+  return Math.max(1, Math.round(minutes));
+}
+
+/**
+ * Parse a duration like "45 min", "1 hr 30 min", "1.5 hours", "90 sec" or a
+ * bare number (minutes) into whole minutes. Unparseable input gives 0.
+ */
+export function parseTimeToMinutes(time: unknown): number {
+  if (typeof time === 'number') return toWholeMinutes(time);
   if (typeof time !== 'string') return 0;
 
   const hourMatch = time.match(/(\d+(?:\.\d+)?)\s*h/i);
-  const minMatch = time.match(/(\d+)\s*m/i);
+  const minMatch = time.match(/(\d+(?:\.\d+)?)\s*m/i);
+  const secMatch = time.match(/(\d+(?:\.\d+)?)\s*s/i);
 
   let minutes = 0;
   if (hourMatch) minutes += parseFloat(hourMatch[1]) * 60;
-  if (minMatch) minutes += parseInt(minMatch[1]);
+  if (minMatch) minutes += parseFloat(minMatch[1]);
+  if (secMatch) minutes += parseFloat(secMatch[1]) / 60;
 
   // If no units, assume minutes
-  if (!hourMatch && !minMatch) {
+  if (!hourMatch && !minMatch && !secMatch) {
     const num = parseFloat(time);
     if (!isNaN(num)) minutes = num;
   }
 
-  return Math.round(minutes);
+  return toWholeMinutes(minutes);
 }
 
-function formatMinutes(minutes: number): string {
+/** Cooking timer length (seconds) for a step of the given minutes, or null for no timer */
+function timerSecondsFor(minutes: number): number | null {
+  return minutes > 0 ? minutes * 60 : null;
+}
+
+/**
+ * Derive a step's numeric timing from its display text. The cooking Timer
+ * reads timer_default (seconds) and time estimates read time_minutes, so both
+ * must follow whatever the user types in the editor.
+ */
+export function stepTimingFromText(text: string): Pick<Step, 'time_minutes' | 'timer_default'> {
+  const minutes = parseTimeToMinutes(text);
+  return { time_minutes: minutes, timer_default: timerSecondsFor(minutes) };
+}
+
+export function formatMinutes(minutes: number): string {
   if (minutes === 0) return '';
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);

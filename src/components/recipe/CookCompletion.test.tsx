@@ -353,4 +353,39 @@ describe('CookCompletion', () => {
       expect(screen.getByText('Great Job!')).toBeInTheDocument();
     });
   });
+
+  it('shows an error and keeps the form when saving fails, then allows a retry', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(addCookHistoryEntry).mockRejectedValueOnce(new Error('QuotaExceededError'));
+
+    render(
+      <CookCompletion
+        recipe={mockRecipe}
+        onComplete={mockOnComplete}
+        onCookAgain={mockOnCookAgain}
+      />
+    );
+
+    const notes = screen.getByPlaceholderText('Any thoughts or tips for next time...');
+    fireEvent.change(notes, { target: { value: 'Needed more salt' } });
+    fireEvent.click(screen.getByText('Save & Finish'));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent("Couldn't save this cook");
+
+    // Still on the form with the user's input intact, not navigated away
+    expect(screen.queryByText('Great Job!')).not.toBeInTheDocument();
+    expect(mockOnComplete).not.toHaveBeenCalled();
+    expect(notes).toHaveValue('Needed more salt');
+
+    // Retrying succeeds and clears the error
+    fireEvent.click(screen.getByText('Try Again'));
+    await waitFor(() => {
+      expect(screen.getByText('Great Job!')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(addCookHistoryEntry).toHaveBeenCalledTimes(2);
+
+    consoleError.mockRestore();
+  });
 });
