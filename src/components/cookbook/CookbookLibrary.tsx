@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Button } from '../common';
 import { GeneralSettings } from '../settings/GeneralSettings';
 import { GlobalSearch } from '../search/GlobalSearch';
+import { NewCookbookModal } from './NewCookbookModal';
 import { ThemeToggle } from '../../contexts';
 import { getAllCookbooks, getShoppingListCount } from '../../db';
 import type { Cookbook, Recipe } from '../../types';
@@ -31,6 +32,7 @@ export function CookbookLibrary({
   const [cookbooks, setCookbooks] = useState<Cookbook[]>([]);
   const [loading, setLoading] = useState(true);
   const [showVisualSettings, setShowVisualSettings] = useState(false);
+  const [showNewCookbook, setShowNewCookbook] = useState(false);
   const [shoppingCount, setShoppingCount] = useState(0);
 
   useEffect(() => {
@@ -117,7 +119,9 @@ export function CookbookLibrary({
               📚 Bookshelf
             </Button>
           )}
-          <Button variant="secondary">+ New Cookbook</Button>
+          <Button variant="secondary" onClick={() => setShowNewCookbook(true)}>
+            + New Cookbook
+          </Button>
         </div>
       </header>
 
@@ -137,7 +141,7 @@ export function CookbookLibrary({
           <p style={{ color: 'var(--text-tertiary)', marginBottom: '1.5rem' }}>
             Create your first cookbook to get started
           </p>
-          <Button>Create Cookbook</Button>
+          <Button onClick={() => setShowNewCookbook(true)}>Create Cookbook</Button>
         </Card>
       ) : (
         <div
@@ -249,6 +253,17 @@ export function CookbookLibrary({
             </Card>
           ))}
         </div>
+      )}
+
+      {showNewCookbook && (
+        <NewCookbookModal
+          onClose={() => setShowNewCookbook(false)}
+          onCreated={(cookbook) => {
+            setShowNewCookbook(false);
+            // Open it straight away — the next thing to do is add recipes
+            onSelectCookbook(cookbook);
+          }}
+        />
       )}
 
       {/* General Settings Modal */}

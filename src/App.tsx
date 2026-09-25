@@ -32,13 +32,17 @@ type AppView =
   | 'miseenplace'
   | 'cooking'
   | 'complete'
-  | 'shopping';
+  | 'shopping'
+  | 'shared';
 
 interface AppState {
   initialized: boolean;
   view: AppView;
   selectedCookbook: Cookbook | null;
   selectedRecipe: Recipe | null;
+  // The unscaled recipe while a scaling is applied — the scaler always works
+  // from this so repeated scalings don't compound rounding
+  baseRecipe: Recipe | null;
   parsedRecipe: ParsedRecipe | null;
   checkedIngredients: string[];
   showChefOllama: boolean;
@@ -48,6 +52,8 @@ interface AppState {
   showScaler: boolean;
   resumeSession: CookingSession | null;
   resumeStepIndex: number;
+  // Encoded recipe from a /shared#… link
+  sharedPayload: string | null;
 }
 
 // ============================================
@@ -59,6 +65,7 @@ type AppAction =
   | { type: 'NAVIGATE'; view: AppView }
   | { type: 'SELECT_COOKBOOK'; cookbook: Cookbook }
   | { type: 'SELECT_RECIPE'; recipe: Recipe }
+  | { type: 'START_COOKING' }
   | { type: 'SET_PARSED_RECIPE'; parsedRecipe: ParsedRecipe | null }
   | { type: 'SAVE_RECIPE' }
   | { type: 'SET_CHECKED_INGREDIENTS'; ingredients: string[] }
@@ -71,6 +78,8 @@ type AppAction =
   | { type: 'BACK_TO_COOKBOOK' }
   | { type: 'UPDATE_RECIPE'; recipe: Recipe }
   | { type: 'SET_RESUME_SESSION'; session: CookingSession | null }
+  | { type: 'SET_COOKING_STEP'; stepIndex: number }
+  | { type: 'OPEN_SHARED'; payload: string }
   | { type: 'RESUME_COOKING'; recipe: Recipe; cookbook: Cookbook; stepIndex: number; checkedIngredients: string[] };
 
 // ============================================
@@ -82,6 +91,7 @@ const initialState: AppState = {
   view: 'library',
   selectedCookbook: null,
   selectedRecipe: null,
+  baseRecipe: null,
   parsedRecipe: null,
   checkedIngredients: [],
   showChefOllama: false,
@@ -91,6 +101,7 @@ const initialState: AppState = {
   showScaler: false,
   resumeSession: null,
   resumeStepIndex: 0,
+  sharedPayload: null,
 };
 
 // ============================================
@@ -106,22 +117,36 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         view: action.view,
-        // Reset resume step when entering cooking normally (not via RESUME_COOKING)
-        ...(action.view === 'cooking' ? { resumeStepIndex: 0 } : {}),
+        // resumeStepIndex tracks the step being cooked, so leaving and
+        // re-entering the step executor (Exit, browser Back/Forward) resumes
+        // where the cook left off. A finished cook starts the next from 1.
+        ...(action.view === 'complete' ? { resumeStepIndex: 0 } : {}),
       };
 
     case 'SELECT_COOKBOOK':
       return { ...state, selectedCookbook: action.cookbook, view: 'cookbook' };
 
     case 'SELECT_RECIPE':
-      return { ...state, selectedRecipe: action.recipe, view: 'detail' };
-
-    case 'SET_PARSED_RECIPE':
       return {
         ...state,
-        parsedRecipe: action.parsedRecipe,
-        view: action.parsedRecipe ? 'edit' : state.view,
+        selectedRecipe: action.recipe,
+        baseRecipe: null,
+        checkedIngredients: [],
+        resumeStepIndex: 0,
+        view: 'detail',
       };
+
+    case 'START_COOKING':
+      // A fresh cook from the recipe page: new grocery check, step 1
+      return { ...state, checkedIngredients: [], resumeStepIndex: 0, view: 'groceries' };
+
+    case 'SET_PARSED_RECIPE':
+      if (!action.parsedRecipe) return { ...state, parsedRecipe: null };
+      // A parse that finishes after the user cancelled or navigated away
+      // must not yank them into the editor (or into a blank screen when no
+      // cookbook is selected any more)
+      if (state.view !== 'import' || !state.selectedCookbook) return state;
+      return { ...state, parsedRecipe: action.parsedRecipe, view: 'edit' };
 
     case 'SAVE_RECIPE':
       return {
@@ -159,6 +184,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'APPLY_SCALING':
       return {
         ...state,
+        baseRecipe: state.baseRecipe ?? state.selectedRecipe,
         selectedRecipe: action.recipe,
         showScaler: false,
       };
@@ -171,7 +197,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         selectedCookbook: null,
         selectedRecipe: null,
+        baseRecipe: null,
         checkedIngredients: [],
+        sharedPayload: null,
         view: 'library',
       };
 
@@ -179,15 +207,22 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         selectedRecipe: null,
+        baseRecipe: null,
         checkedIngredients: [],
         view: 'cookbook',
       };
 
     case 'UPDATE_RECIPE':
-      return { ...state, selectedRecipe: action.recipe };
+      return { ...state, selectedRecipe: action.recipe, baseRecipe: null };
 
     case 'SET_RESUME_SESSION':
       return { ...state, resumeSession: action.session };
+
+    case 'SET_COOKING_STEP':
+      return { ...state, resumeStepIndex: action.stepIndex };
+
+    case 'OPEN_SHARED':
+      return { ...state, sharedPayload: action.payload, view: 'shared' };
 
     case 'RESUME_COOKING':
       return {
@@ -195,6 +230,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         selectedCookbook: action.cookbook,
         selectedRecipe: action.recipe,
         checkedIngredients: action.checkedIngredients,
+        baseRecipe: null,
         resumeStepIndex: action.stepIndex,
         resumeSession: null,
         view: 'cooking',
@@ -231,6 +267,7 @@ function App() {
       view: state.view,
       selectedCookbook: state.selectedCookbook,
       selectedRecipe: state.selectedRecipe,
+      sharedPayload: state.sharedPayload,
       initialized: state.initialized,
     },
     dispatch,
@@ -287,7 +324,7 @@ function App() {
   }, []);
 
   const handleStartCooking = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'groceries' });
+    dispatch({ type: 'START_COOKING' });
   }, []);
 
   const handleStartImport = useCallback(() => {
@@ -331,19 +368,23 @@ function App() {
     dispatch({ type: 'NAVIGATE', view: 'complete' });
   }, []);
 
-  const handleCompletionFinished = useCallback(async () => {
+  const handleCompletionFinished = useCallback(() => {
+    dispatch({ type: 'BACK_TO_LIBRARY' });
+  }, []);
+
+  const handleCookAgain = useCallback(async () => {
+    // Reload so the cook just saved is in cook_history — otherwise the next
+    // completion screen's stats and the History tab lag one cook behind
     if (state.selectedRecipe) {
-      const refreshed = await getRecipe(state.selectedRecipe.id);
-      if (refreshed) {
-        dispatch({ type: 'UPDATE_RECIPE', recipe: refreshed });
+      try {
+        const refreshed = await getRecipe(state.selectedRecipe.id);
+        if (refreshed) dispatch({ type: 'UPDATE_RECIPE', recipe: refreshed });
+      } catch {
+        // Stale history is better than blocking the next cook
       }
     }
-    dispatch({ type: 'BACK_TO_LIBRARY' });
+    dispatch({ type: 'START_COOKING' });
   }, [state.selectedRecipe]);
-
-  const handleCookAgain = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', view: 'groceries' });
-  }, []);
 
   const handleOpenChefForIngredient = useCallback((ingredient: Ingredient) => {
     dispatch({
@@ -363,6 +404,13 @@ function App() {
   const handleBackToLibrary = useCallback(() => {
     dispatch({ type: 'BACK_TO_LIBRARY' });
   }, []);
+
+  // Ctrl+H — inert in the editor for the same reason Escape is: it would
+  // silently discard an in-progress recipe
+  const handleHomeShortcut = useCallback(() => {
+    if (state.view === 'edit') return;
+    dispatch({ type: 'BACK_TO_LIBRARY' });
+  }, [state.view]);
 
   const handleBackToCookbook = useCallback(() => {
     dispatch({ type: 'BACK_TO_COOKBOOK' });
@@ -402,8 +450,10 @@ function App() {
   }, []);
 
   // Escape mirrors each view's on-screen back button. Deliberately inert in
-  // 'edit' (a stray Escape must not discard an in-progress recipe edit) and
-  // 'complete' (user should choose Save or Done explicitly).
+  // 'edit' (a stray Escape must not discard an in-progress recipe edit),
+  // 'cooking' (a stray keypress mid-cook must not exit the step executor —
+  // it has its own Exit button) and 'complete' (user should choose Save or
+  // Done explicitly).
   const handleEscape = useCallback(() => {
     if (state.showChefOllama) {
       dispatch({ type: 'CLOSE_CHEF' });
@@ -418,6 +468,9 @@ function App() {
       case 'shopping':
         dispatch({ type: 'NAVIGATE', view: 'library' });
         break;
+      case 'shared':
+        dispatch({ type: 'BACK_TO_LIBRARY' });
+        break;
       case 'cookbook':
         dispatch({ type: 'BACK_TO_LIBRARY' });
         break;
@@ -431,7 +484,6 @@ function App() {
         dispatch({ type: 'NAVIGATE', view: 'detail' });
         break;
       case 'miseenplace':
-      case 'cooking':
         dispatch({ type: 'NAVIGATE', view: 'groceries' });
         break;
       default:
@@ -503,7 +555,7 @@ function App() {
   return (
     <ThemeProvider>
       <KeyboardShortcutsProvider>
-        <AppShortcuts onHome={handleBackToLibrary} onEscape={handleEscape} />
+        <AppShortcuts onHome={handleHomeShortcut} onEscape={handleEscape} />
         <div style={{ minHeight: '100vh', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           {/* Offline Indicator */}
           {isOffline && (
@@ -697,7 +749,7 @@ function App() {
           {state.showScaler && state.selectedRecipe && (
             <ErrorBoundary resetLabel="Close Scaler" onReset={handleCancelScaling}>
               <RecipeScaler
-                recipe={state.selectedRecipe}
+                recipe={state.baseRecipe ?? state.selectedRecipe}
                 onApply={handleApplyScaling}
                 onCancel={handleCancelScaling}
               />

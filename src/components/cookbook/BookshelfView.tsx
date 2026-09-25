@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, Button } from '../common';
+import { useEscapeToClose } from '../../contexts';
 import {
   getAllBookshelves,
   getCookbooksByBookshelf,
@@ -46,6 +47,9 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
   const [newShelfColor, setNewShelfColor] = useState('#6366f1');
   const [draggedCookbook, setDraggedCookbook] = useState<Cookbook | null>(null);
   const [collapsedShelves, setCollapsedShelves] = useState<Set<string>>(new Set());
+
+  useEscapeToClose(() => setEditingShelf(null), editingShelf !== null);
+  useEscapeToClose(() => setShowNewShelfForm(false), showNewShelfForm && editingShelf === null);
 
   useEffect(() => {
     loadData();
@@ -95,8 +99,10 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
   }
 
   async function handleUpdateShelf(shelf: Bookshelf) {
+    // Same rule as creation — a shelf must keep a name
+    if (!shelf.name.trim()) return;
     await updateBookshelf(shelf.id, {
-      name: shelf.name,
+      name: shelf.name.trim(),
       description: shelf.description,
       icon: shelf.icon,
       color: shelf.color,
@@ -380,8 +386,10 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
                       <CookbookCard
                         key={cookbook.id}
                         cookbook={cookbook}
+                        shelves={shelves.map(({ shelf: s }) => s)}
                         onSelect={() => onSelectCookbook(cookbook)}
                         onDragStart={() => handleDragStart(cookbook)}
+                        onMove={(shelfId) => handleAssignCookbook(cookbook, shelfId)}
                       />
                     ))}
                   </div>
@@ -391,8 +399,9 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
           </div>
         ))}
 
-        {/* Unshelved Cookbooks */}
-        {unshelvedCookbooks.length > 0 && (
+        {/* Unshelved Cookbooks — kept visible (even empty) whenever shelves
+            exist, so it stays a drop target for taking cookbooks off a shelf */}
+        {(unshelvedCookbooks.length > 0 || shelves.length > 0) && (
           <div
             onDragOver={handleDragOver}
             onDrop={() => handleDrop(null)}
@@ -425,6 +434,19 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
               </div>
             </div>
             <div style={{ padding: '1rem 1.5rem' }}>
+              {unshelvedCookbooks.length === 0 ? (
+                <div
+                  style={{
+                    padding: '2rem',
+                    textAlign: 'center',
+                    color: 'var(--text-tertiary)',
+                    border: '2px dashed var(--border-secondary)',
+                    borderRadius: '0.5rem',
+                  }}
+                >
+                  Drag cookbooks here to take them off their shelf
+                </div>
+              ) : (
               <div
                 style={{
                   display: 'grid',
@@ -436,11 +458,14 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
                   <CookbookCard
                     key={cookbook.id}
                     cookbook={cookbook}
+                    shelves={shelves.map(({ shelf }) => shelf)}
                     onSelect={() => onSelectCookbook(cookbook)}
                     onDragStart={() => handleDragStart(cookbook)}
+                    onMove={(shelfId) => handleAssignCookbook(cookbook, shelfId)}
                   />
                 ))}
               </div>
+              )}
             </div>
           </div>
         )}
@@ -463,6 +488,9 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
       {/* Edit Shelf Modal */}
       {editingShelf && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Edit shelf"
           style={{
             position: 'fixed',
             inset: 0,
@@ -567,7 +595,9 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                 <Button variant="ghost" onClick={() => setEditingShelf(null)}>Cancel</Button>
-                <Button onClick={() => handleUpdateShelf(editingShelf)}>Save Changes</Button>
+                <Button onClick={() => handleUpdateShelf(editingShelf)} disabled={!editingShelf.name.trim()}>
+                  Save Changes
+                </Button>
               </div>
             </div>
           </Card>
@@ -583,11 +613,13 @@ export function BookshelfView({ onSelectCookbook, onBack }: BookshelfViewProps) 
 
 interface CookbookCardProps {
   cookbook: Cookbook;
+  shelves: Bookshelf[];
   onSelect: () => void;
   onDragStart: () => void;
+  onMove: (shelfId: string | null) => void;
 }
 
-function CookbookCard({ cookbook, onSelect, onDragStart }: CookbookCardProps) {
+function CookbookCard({ cookbook, shelves, onSelect, onDragStart, onMove }: CookbookCardProps) {
   return (
     <div
       draggable
@@ -680,6 +712,33 @@ function CookbookCard({ cookbook, onSelect, onDragStart }: CookbookCardProps) {
         >
           {cookbook.category}
         </span>
+        {/* Drag and drop needs a mouse — this works with keyboard and touch */}
+        {shelves.length > 0 && (
+          <select
+            aria-label={`Move ${cookbook.title} to shelf`}
+            value={cookbook.bookshelf_id ?? ''}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onMove(e.target.value || null)}
+            style={{
+              display: 'block',
+              marginTop: '0.5rem',
+              maxWidth: '100%',
+              padding: '0.125rem 0.25rem',
+              fontSize: '0.75rem',
+              border: '1px solid var(--input-border)',
+              borderRadius: '0.25rem',
+              background: 'var(--input-bg)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <option value="">Unshelved</option>
+            {shelves.map((shelf) => (
+              <option key={shelf.id} value={shelf.id}>
+                {shelf.icon} {shelf.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
     </div>
   );
