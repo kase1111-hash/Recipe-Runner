@@ -10,6 +10,7 @@ import { ChefOllamaChat } from './components/chef-ollama/ChefOllamaChat';
 import { ErrorBoundary } from './components/common';
 import { RecipeImport } from './components/import/RecipeImport';
 import { RecipeEditor } from './components/import/RecipeEditor';
+import { SharedRecipeImport } from './components/share/SharedRecipeImport';
 import { useRouter } from './hooks/useRouter';
 import { initializeDatabase, getRecipe, getCookbook, getActiveCookingSession, deleteCookingSession } from './db';
 import { seedSampleData } from './data/sampleCookbook';
@@ -449,6 +450,12 @@ function App() {
     dispatch({ type: 'SELECT_RECIPE', recipe });
   }, []);
 
+  // A recipe saved from a /shared link opens like any other recipe
+  const handleSharedRecipeSaved = useCallback((recipe: Recipe, cookbook: Cookbook) => {
+    dispatch({ type: 'SELECT_COOKBOOK', cookbook });
+    dispatch({ type: 'SELECT_RECIPE', recipe });
+  }, []);
+
   // Escape mirrors each view's on-screen back button. Deliberately inert in
   // 'edit' (a stray Escape must not discard an in-progress recipe edit),
   // 'cooking' (a stray keypress mid-cook must not exit the step executor —
@@ -645,6 +652,17 @@ function App() {
           {state.view === 'shopping' && (
             <ErrorBoundary resetLabel="Back to Library" onReset={handleBackToLibrary}>
               <ShoppingListView onBack={handleBackToLibrary} />
+            </ErrorBoundary>
+          )}
+
+          {state.view === 'shared' && state.sharedPayload !== null && (
+            <ErrorBoundary resetLabel="Back to Library" onReset={handleBackToLibrary}>
+              <SharedRecipeImport
+                key={state.sharedPayload}
+                payload={state.sharedPayload}
+                onSaved={handleSharedRecipeSaved}
+                onCancel={handleBackToLibrary}
+              />
             </ErrorBoundary>
           )}
 
