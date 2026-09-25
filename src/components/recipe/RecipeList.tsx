@@ -76,9 +76,9 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
       result = result.filter((recipe) => recipe.course_type === courseTypeFilter);
     }
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    // Apply search filter (trimmed, so "garlic " still matches "garlic")
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
       result = result.filter(
         (recipe) =>
           recipe.name.toLowerCase().includes(query) ||
@@ -301,7 +301,7 @@ export function RecipeList({ cookbook, onSelectRecipe, onAddRecipe, onBack }: Re
           {/* Results count */}
           <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             {filteredRecipes.length} of {recipes.length} recipes
-            {searchQuery && ` matching "${searchQuery}"`}
+            {searchQuery.trim() && ` matching "${searchQuery.trim()}"`}
             {courseTypeFilter !== 'all' && ` in ${CourseTypeLabels[courseTypeFilter as CourseType]?.label || courseTypeFilter}`}
           </div>
         </Card>
