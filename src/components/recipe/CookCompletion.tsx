@@ -24,6 +24,7 @@ export function CookCompletion({
   const [completed, setCompleted] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleAddAdjustment = () => {
     if (newAdjustment.trim()) {
@@ -38,6 +39,7 @@ export function CookCompletion({
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
 
     try {
       // Create cook history entry
@@ -55,6 +57,9 @@ export function CookCompletion({
       setSaved(true);
     } catch (error) {
       console.error('Failed to save cook history:', error);
+      // Stay on the form so the rating and notes aren't lost — the user can
+      // retry, or Skip to leave without saving
+      setSaveError("Couldn't save this cook to your history. Your rating and notes are still here — try again, or Skip to leave without saving.");
     } finally {
       setSaving(false);
     }
@@ -314,13 +319,30 @@ export function CookCompletion({
           />
         </Card>
 
+        {saveError && (
+          <div
+            role="alert"
+            style={{
+              marginBottom: '1rem',
+              padding: '0.75rem 1rem',
+              background: 'var(--error-bg)',
+              border: '1px solid var(--error-border)',
+              borderRadius: '0.5rem',
+              color: 'var(--error-text)',
+              fontSize: '0.875rem',
+            }}
+          >
+            {saveError}
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
           <Button variant="ghost" onClick={onComplete}>
             Skip
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save & Finish'}
+            {saving ? 'Saving...' : saveError ? 'Try Again' : 'Save & Finish'}
           </Button>
         </div>
       </div>

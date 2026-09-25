@@ -4,6 +4,7 @@
 import { useState, useMemo } from 'react';
 import { Button, Card } from '../common';
 import { findSubstitutions, type SubstitutionResult } from '../../services/substitutions';
+import { categorizeIngredient, type IngredientCategory } from '../../services/ingredientCategories';
 import type { Recipe, Ingredient } from '../../types';
 
 interface MiseEnPlaceProps {
@@ -21,13 +22,16 @@ interface PrepItem extends Ingredient {
 
 type PrepCategory = 'proteins' | 'produce' | 'dairy' | 'pantry' | 'spices' | 'other';
 
-const CATEGORY_KEYWORDS: Record<PrepCategory, string[]> = {
-  proteins: ['chicken', 'beef', 'pork', 'fish', 'salmon', 'shrimp', 'tofu', 'egg', 'turkey', 'lamb', 'bacon', 'sausage'],
-  produce: ['onion', 'garlic', 'tomato', 'pepper', 'lettuce', 'spinach', 'carrot', 'celery', 'potato', 'mushroom', 'lemon', 'lime', 'apple', 'banana', 'berry', 'herb', 'basil', 'cilantro', 'parsley', 'thyme', 'rosemary'],
-  dairy: ['milk', 'cream', 'butter', 'cheese', 'yogurt', 'sour cream'],
-  pantry: ['flour', 'sugar', 'oil', 'vinegar', 'broth', 'stock', 'pasta', 'rice', 'bread', 'can', 'sauce'],
-  spices: ['salt', 'pepper', 'cumin', 'paprika', 'cinnamon', 'oregano', 'chili', 'curry', 'turmeric', 'ginger'],
-  other: [],
+// Eggs are prepped alongside the proteins here (the grocery list files them
+// under dairy instead)
+const PREP_CATEGORY: Record<IngredientCategory, PrepCategory> = {
+  proteins: 'proteins',
+  eggs: 'proteins',
+  produce: 'produce',
+  dairy: 'dairy',
+  pantry: 'pantry',
+  spices: 'spices',
+  other: 'other',
 };
 
 const CATEGORY_LABELS: Record<PrepCategory, { label: string; icon: string }> = {
@@ -39,15 +43,9 @@ const CATEGORY_LABELS: Record<PrepCategory, { label: string; icon: string }> = {
   other: { label: 'Other', icon: '📦' },
 };
 
-function categorizeIngredient(item: string): PrepCategory {
-  const lower = item.toLowerCase();
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (category === 'other') continue;
-    if (keywords.some(kw => lower.includes(kw))) {
-      return category as PrepCategory;
-    }
-  }
-  return 'other';
+// An item is ready once gathered and, if it has a prep step, prepped
+function isReady(item: PrepItem): boolean {
+  return item.gathered && (!item.prep || item.prepped);
 }
 
 export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
@@ -56,7 +54,9 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
       ...ing,
       id: `prep-${idx}`,
       gathered: false,
-      prepped: !ing.prep, // If no prep required, mark as prepped
+      // Only meaningful for items with a prep step — items without one are
+      // not pre-marked, so they can't inflate progress before anything is done
+      prepped: false,
       substitution: undefined,
     }))
   );
@@ -74,8 +74,7 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
     };
 
     prepItems.forEach(item => {
-      const category = categorizeIngredient(item.item);
-      groups[category].push(item);
+      groups[PREP_CATEGORY[categorizeIngredient(item.item)]].push(item);
     });
 
     return groups;
@@ -106,15 +105,18 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
     setShowSubstitutions(null);
   };
 
+  // Count real tasks only: one gather per ingredient, plus one prep per
+  // ingredient that actually has a prep step
   const progress = useMemo(() => {
-    const total = prepItems.length * 2; // Both gathered and prepped
+    const total = prepItems.reduce((acc, item) => acc + 1 + (item.prep ? 1 : 0), 0);
+    if (total === 0) return 100; // Nothing to prepare
     const completed = prepItems.reduce((acc, item) => {
-      return acc + (item.gathered ? 1 : 0) + (item.prepped ? 1 : 0);
+      return acc + (item.gathered ? 1 : 0) + (item.prep && item.prepped ? 1 : 0);
     }, 0);
     return Math.round((completed / total) * 100);
   }, [prepItems]);
 
-  const allReady = prepItems.every(item => item.gathered && item.prepped);
+  const allReady = prepItems.every(isReady);
 
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
@@ -238,7 +240,7 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
               <span>{icon}</span>
               {label}
               <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
-                ({items.filter(i => i.gathered && i.prepped).length}/{items.length})
+                ({items.filter(isReady).length}/{items.length})
               </span>
             </h3>
 
@@ -251,9 +253,9 @@ export function MiseEnPlace({ recipe, onComplete, onBack }: MiseEnPlaceProps) {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '0.75rem',
-                    background: item.gathered && item.prepped ? 'var(--success-bg)' : 'var(--bg-secondary)',
+                    background: isReady(item) ? 'var(--success-bg)' : 'var(--bg-secondary)',
                     borderRadius: '0.5rem',
-                    border: `1px solid ${item.gathered && item.prepped ? 'var(--success-border)' : 'var(--border-primary)'}`,
+                    border: `1px solid ${isReady(item) ? 'var(--success-border)' : 'var(--border-primary)'}`,
                   }}
                 >
                   <div style={{ flex: 1 }}>

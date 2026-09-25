@@ -2,7 +2,15 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Button, Timer, ProgressBar } from '../common';
 import { saveCookingSession, deleteCookingSession } from '../../db';
 import { useShortcut } from '../../contexts';
-import type { Recipe } from '../../types';
+import type { Recipe, TimerState } from '../../types';
+
+// A resumed session can point past the end of a recipe that has since been
+// edited down to fewer steps
+function clampStepIndex(index: number, stepCount: number): number {
+  if (stepCount === 0) return 0;
+  const whole = Number.isFinite(index) ? Math.floor(index) : 0;
+  return Math.min(Math.max(0, whole), stepCount - 1);
+}
 
 interface StepExecutorProps {
   recipe: Recipe;
@@ -21,14 +29,34 @@ export function StepExecutor({
   onBack,
   initialStepIndex = 0,
 }: StepExecutorProps) {
-  const [currentStepIndex, setCurrentStepIndex] = useState(initialStepIndex);
+  const [currentStepIndex, setCurrentStepIndex] = useState(() =>
+    clampStepIndex(initialStepIndex, recipe.steps.length)
+  );
+  // State of each step's timer, by step index. Any timer that isn't idle
+  // stays mounted after the user moves to another step, so it keeps counting
+  // and still rings — passive steps are exactly when people move ahead.
+  const [timerStates, setTimerStates] = useState<Record<number, TimerState>>({});
 
   const currentStep = recipe.steps[currentStepIndex];
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === recipe.steps.length - 1;
 
+  const handleTimerStateChange = useCallback((stepIndex: number, timerState: TimerState) => {
+    setTimerStates((prev) => {
+      const next = { ...prev };
+      if (timerState === 'idle') {
+        delete next[stepIndex];
+      } else {
+        next[stepIndex] = timerState;
+      }
+      return next;
+    });
+  }, []);
+
   // Save cooking session on every step change
   useEffect(() => {
+    // Nothing to resume in a recipe without steps
+    if (recipe.steps.length === 0) return;
     saveCookingSession({
       recipeId: recipe.id,
       cookbookId: recipe.cookbook_id,
@@ -40,7 +68,7 @@ export function StepExecutor({
     }).catch(() => {
       // Session save is best-effort
     });
-  }, [currentStepIndex, recipe.id, recipe.cookbook_id, checkedIngredients]);
+  }, [currentStepIndex, recipe.id, recipe.cookbook_id, recipe.steps.length, checkedIngredients]);
 
   // Swipe navigation for mobile
   const touchStartX = useRef<number | null>(null);
@@ -97,6 +125,14 @@ export function StepExecutor({
         <Button onClick={onBack}>← Go Back</Button>
       </div>
     );
+  }
+
+  // Started timers from other steps first (compact), then this step's own
+  const timerStepIndices = recipe.steps
+    .map((_, idx) => idx)
+    .filter((idx) => idx !== currentStepIndex && recipe.steps[idx].timer_default && timerStates[idx]);
+  if (currentStep.timer_default) {
+    timerStepIndices.push(currentStepIndex);
   }
 
   return (
@@ -238,16 +274,32 @@ export function StepExecutor({
           </Card>
         )}
 
-        {/* Timer */}
-        {currentStep.timer_default && (
-          <div style={{ marginBottom: '1.5rem' }}>
-            <Timer
-              key={currentStepIndex}
-              defaultSeconds={currentStep.timer_default}
-              onComplete={() => {
-                // Timer complete notification handled in Timer component
-              }}
-            />
+        {/* Timers: the current step's at full size, plus a compact one for
+            every other step whose timer has been started. They share this
+            one parent and are keyed by step index, so a Timer keeps its
+            state (and keeps running) as it switches between the two sizes. */}
+        {timerStepIndices.length > 0 && (
+          <div
+            style={{
+              marginBottom: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+            }}
+          >
+            {timerStepIndices.map((idx) => {
+              const step = recipe.steps[idx];
+              const isCurrent = idx === currentStepIndex;
+              return (
+                <Timer
+                  key={idx}
+                  compact={!isCurrent}
+                  label={isCurrent ? undefined : `Step ${idx + 1} · ${step.title}`}
+                  defaultSeconds={step.timer_default ?? 0}
+                  onStateChange={(timerState) => handleTimerStateChange(idx, timerState)}
+                />
+              );
+            })}
           </div>
         )}
 

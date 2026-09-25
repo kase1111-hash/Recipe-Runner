@@ -65,11 +65,11 @@ describe('MiseEnPlace', () => {
     expect(screen.getByText('Onion')).toBeInTheDocument();
   });
 
-  it('items without prep start with prepped=true (only need gathering)', () => {
+  it('items without prep only need gathering (no prep checkbox)', () => {
     renderComponent();
 
     // Butter and Salt have no prep instruction, so they should NOT show a prepped checkbox.
-    // Items without prep are automatically prepped, meaning they only need a gathered checkbox.
+    // Items without prep have no prep task, so they only get a gathered checkbox.
     // The prepped checkbox button (title="Prepped") is only rendered when item.prep is truthy.
     const preppedButtons = screen.getAllByTitle('Prepped');
     // Only Chicken breast and Onion have prep, so only 2 prepped buttons should exist.
@@ -131,19 +131,49 @@ describe('MiseEnPlace', () => {
     expect(firstPrepped.textContent).not.toBe('\u2713');
   });
 
-  it('progress updates when items are toggled', () => {
+  it('progress starts at 0% and counts only real tasks', () => {
     renderComponent();
 
-    // Initial progress: items without prep (Butter, Salt) start prepped = 2 completed out of 8 total
-    // Progress = (2/8) * 100 = 25%
-    expect(screen.getByText('25%')).toBeInTheDocument();
+    // Tasks: 4 gathers + 2 preps (Chicken breast, Onion) = 6. Items without
+    // prep must not count as done before anything has been touched.
+    expect(screen.getByText('0%')).toBeInTheDocument();
 
-    // Toggle gathered on the first item (Chicken breast)
+    // Gather Chicken breast: 1/6 = 17%
     const gatheredButtons = screen.getAllByTitle('Gathered');
     fireEvent.click(gatheredButtons[0]);
+    expect(screen.getByText('17%')).toBeInTheDocument();
 
-    // Now 3 completed out of 8 = 37.5%, rounded to 38%
-    expect(screen.getByText('38%')).toBeInTheDocument();
+    // Prep Chicken breast: 2/6 = 33%
+    fireEvent.click(screen.getAllByTitle('Prepped')[0]);
+    expect(screen.getByText('33%')).toBeInTheDocument();
+
+    // Gather everything and prep the onion: 6/6 = 100%
+    screen.getAllByTitle('Gathered').slice(1).forEach((btn) => fireEvent.click(btn));
+    fireEvent.click(screen.getAllByTitle('Prepped')[1]);
+    expect(screen.getByText('100%')).toBeInTheDocument();
+  });
+
+  it('a recipe where nothing needs prepping reaches 100% once gathered', () => {
+    const noPrep: Recipe = {
+      ...mockRecipe,
+      ingredients: [
+        { item: 'Salt', amount: '1', unit: 'tsp', prep: null, optional: false, substitutes: [] },
+        { item: 'Butter', amount: '1', unit: 'tbsp', prep: null, optional: false, substitutes: [] },
+      ],
+    };
+    renderComponent({ recipe: noPrep });
+
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    screen.getAllByTitle('Gathered').forEach((btn) => fireEvent.click(btn));
+    expect(screen.getByText('100%')).toBeInTheDocument();
+    expect(screen.getByText(/Start Cooking/)).toBeInTheDocument();
+  });
+
+  it('a recipe with no ingredients shows 100%, not NaN%', () => {
+    renderComponent({ recipe: { ...mockRecipe, ingredients: [] } });
+
+    expect(screen.queryByText('NaN%')).not.toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
   });
 
   it('complete button is disabled when not all items are ready', () => {
@@ -216,5 +246,22 @@ describe('MiseEnPlace', () => {
     // No items should land in "Pantry" or "Other" for this recipe
     expect(screen.queryByText('Pantry')).not.toBeInTheDocument();
     expect(screen.queryByText('Other')).not.toBeInTheDocument();
+  });
+
+  it('files black pepper under spices and eggs under proteins', () => {
+    const recipe: Recipe = {
+      ...mockRecipe,
+      ingredients: [
+        { item: 'black pepper', amount: '1', unit: 'tsp', prep: 'freshly ground', optional: false, substitutes: [] },
+        { item: 'eggs', amount: '2', unit: '', prep: null, optional: false, substitutes: [] },
+      ],
+    };
+    renderComponent({ recipe });
+
+    const spices = screen.getByText('Spices & Seasonings').closest('h3')!.parentElement!;
+    expect(spices).toHaveTextContent('black pepper');
+    const proteins = screen.getByText('Proteins').closest('h3')!.parentElement!;
+    expect(proteins).toHaveTextContent('eggs');
+    expect(screen.queryByText('Produce')).not.toBeInTheDocument();
   });
 });
