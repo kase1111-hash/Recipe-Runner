@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Button, Card } from '../common';
-import { useTheme, type ThemeMode } from '../../contexts';
+import { useTheme, useEscapeToClose, type ThemeMode } from '../../contexts';
 import { getPreferences, savePreferences } from '../../db';
 import { validateOllamaEndpoint } from '../../services/utils';
 import type { ChefOllamaConfig, UserPreferences } from '../../types';
@@ -20,6 +20,7 @@ const TIMEOUT_MIN_SECONDS = 10;
 const TIMEOUT_MAX_SECONDS = 300;
 
 export function GeneralSettings({ onClose }: GeneralSettingsProps) {
+  useEscapeToClose(onClose);
   const { mode, setMode } = useTheme();
   const [preferences, setPreferences] = useState<UserPreferences>(getPreferences);
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
@@ -120,6 +121,9 @@ export function GeneralSettings({ onClose }: GeneralSettingsProps) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
       style={{
         position: 'fixed',
         inset: 0,

@@ -40,7 +40,7 @@ const lightTheme = {
   '--text-primary': '#111827',
   '--text-secondary': '#374151',
   '--text-tertiary': '#6b7280',
-  '--text-muted': '#9ca3af',
+  '--text-muted': '#737a86',
 
   // Accent colors
   '--accent-primary': '#2563eb',

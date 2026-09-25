@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from './Button';
+import { useEscapeToClose } from '../../contexts';
 import {
   createShareLink,
   canNativeShare,
@@ -58,6 +59,7 @@ const errorBoxStyle = {
 };
 
 export function ShareModal({ recipe, onClose }: ShareModalProps) {
+  useEscapeToClose(onClose);
   const [activeTab, setActiveTab] = useState<ShareTab>('link');
   const [link, setLink] = useState<LinkState>({ status: 'loading' });
   const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
@@ -155,6 +157,9 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Share recipe"
       style={{
         position: 'fixed',
         inset: 0,
@@ -389,7 +394,7 @@ export function ShareModal({ recipe, onClose }: ShareModalProps) {
                   alignItems: 'center',
                   gap: '0.75rem',
                   padding: '0.75rem 1rem',
-                  background: '#1da1f2',
+                  background: '#0c7abf',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.375rem',

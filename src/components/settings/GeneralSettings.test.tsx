@@ -26,6 +26,7 @@ vi.mock('../../db', () => ({
 
 vi.mock('../../contexts', () => ({
   useTheme: () => ({ mode: 'dark', setMode: vi.fn() }),
+  useEscapeToClose: vi.fn(),
 }));
 
 import { GeneralSettings } from './GeneralSettings';

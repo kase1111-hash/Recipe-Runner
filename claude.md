@@ -35,6 +35,7 @@ src/
 │   ├── import/                # Recipe import/editor
 │   ├── search/                # Global recipe search (GlobalSearch)
 │   ├── shopping/              # Multi-recipe shopping list (ShoppingListView)
+│   ├── share/                 # Opening /shared#… recipe links (SharedRecipeImport)
 │   ├── chef-ollama/           # AI assistant
 │   └── settings/              # User preferences
 ├── services/                  # Business logic
@@ -44,7 +45,8 @@ src/
 │   ├── recipeSearch.ts        # Cross-cookbook search + ranking
 │   ├── shoppingList.ts        # Ingredient consolidation for shopping list
 │   ├── documentParsing.ts     # PDF/image/text extraction
-│   ├── sharing.ts / export.ts # Recipe sharing and export formats
+│   ├── sharing.ts / export.ts # Self-contained share links (recipe in URL fragment), export formats
+│   ├── ingredientCategories.ts # Whole-word ingredient categorization (grocery + mise en place)
 │   ├── substitutions.ts       # Offline ingredient substitutions
 │   └── utils/                 # parseAmount, sanitize
 ├── db/index.ts                # Dexie.js database + CRUD
