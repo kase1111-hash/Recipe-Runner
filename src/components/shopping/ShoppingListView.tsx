@@ -1,33 +1,41 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, Button, ProgressBar } from '../common';
 import {
   loadShoppingList,
   consolidateItems,
   setConsolidatedItemChecked,
   removeConsolidatedItem,
+  removeRecipeFromShoppingList,
   clearCheckedItems,
   clearShoppingList,
   addCustomShoppingItem,
   formatShoppingListText,
   type ConsolidatedItem,
 } from '../../services/shoppingList';
+import { copyToClipboard } from '../../services/export';
 import type { ShoppingListItem } from '../../types';
 
 interface ShoppingListViewProps {
   onBack: () => void;
 }
 
+type CopyState = 'idle' | 'copied' | 'failed';
+
 export function ShoppingListView({ onBack }: ShoppingListViewProps) {
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [customText, setCustomText] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
   const [confirmClear, setConfirmClear] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const refresh = useCallback(async () => {
     try {
       const loaded = await loadShoppingList();
       setItems(loaded);
+    } catch {
+      setErrorMessage('Could not load the shopping list');
     } finally {
       setLoading(false);
     }
@@ -37,9 +45,18 @@ export function ShoppingListView({ onBack }: ShoppingListViewProps) {
     refresh();
   }, [refresh]);
 
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
+
   const consolidated = consolidateItems(items);
   const checkedCount = consolidated.filter((c) => c.checked).length;
-  const recipeNames = [...new Set(items.map((i) => i.recipe_name).filter(Boolean))] as string[];
+  // One entry per source recipe (id → name), in the order they were added
+  const sourceRecipes = [
+    ...new Map(
+      items
+        .filter((i) => i.recipe_id)
+        .map((i) => [i.recipe_id as string, i.recipe_name || 'Untitled recipe'] as const)
+    ).entries(),
+  ];
 
   async function handleToggle(item: ConsolidatedItem) {
     await setConsolidatedItemChecked(item, !item.checked);
@@ -75,12 +92,40 @@ export function ShoppingListView({ onBack }: ShoppingListViewProps) {
     await refresh();
   }
 
-  function handleCopy() {
+  async function handleRemoveRecipe(recipeId: string, recipeName: string) {
+    try {
+      await removeRecipeFromShoppingList(recipeId);
+      setErrorMessage('');
+    } catch {
+      setErrorMessage(`Could not remove ${recipeName} from the list`);
+    }
+    await refresh();
+  }
+
+  async function handleCopy() {
     const text = formatShoppingListText(consolidated);
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    let next: CopyState;
+    try {
+      await copyToClipboard(text);
+      next = 'copied';
+    } catch {
+      // Clipboard API is missing on plain-http origins, or permission was denied
+      next = 'failed';
+    }
+    setCopyState(next);
+    clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopyState('idle'), next === 'failed' ? 4000 : 2000);
+  }
+
+  async function handleShare() {
+    try {
+      await navigator.share({ title: 'Shopping List', text: formatShoppingListText(consolidated) });
+    } catch (error) {
+      // Closing the share sheet rejects with AbortError - that's not a failure
+      if ((error as Error | undefined)?.name === 'AbortError') return;
+      // Sharing isn't allowed here (e.g. no user gesture); fall back to copying
+      await handleCopy();
+    }
   }
 
   if (loading) {
@@ -109,29 +154,77 @@ export function ShoppingListView({ onBack }: ShoppingListViewProps) {
             >
               🛒 Shopping List
             </h1>
-            <p style={{ color: 'var(--text-tertiary)', margin: 0 }}>
-              {recipeNames.length > 0
-                ? `From: ${recipeNames.join(', ')}`
-                : 'Add recipes from their detail page, or add items below'}
-            </p>
+            {sourceRecipes.length > 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>From:</span>
+                {sourceRecipes.map(([recipeId, recipeName]) => (
+                  <span
+                    key={recipeId}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      padding: '0.125rem 0.25rem 0.125rem 0.625rem',
+                      background: 'var(--accent-light)',
+                      color: 'var(--accent-primary)',
+                      borderRadius: '9999px',
+                      fontSize: '0.8125rem',
+                    }}
+                  >
+                    {recipeName}
+                    <button
+                      onClick={() => handleRemoveRecipe(recipeId, recipeName)}
+                      aria-label={`Remove ${recipeName} from shopping list`}
+                      title={`Remove ${recipeName}'s ingredients`}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        padding: '0 0.25rem',
+                        fontSize: '0.75rem',
+                        lineHeight: 1,
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-tertiary)', margin: 0 }}>
+                Add recipes from their detail page, or add items below
+              </p>
+            )}
           </div>
           {consolidated.length > 0 && (
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <Button variant="secondary" size="sm" onClick={handleCopy}>
-                {copied ? 'Copied!' : '📋 Copy'}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }} aria-live="polite">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCopy}
+                style={copyState === 'failed' ? { color: 'var(--error)' } : undefined}
+              >
+                {copyState === 'copied' ? '✓ Copied!' : copyState === 'failed' ? 'Copy failed' : '📋 Copy'}
               </Button>
-              {typeof navigator !== 'undefined' && navigator.share && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => navigator.share({ title: 'Shopping List', text: formatShoppingListText(consolidated) })}
-                >
+              {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
+                <Button variant="secondary" size="sm" onClick={handleShare}>
                   Share
                 </Button>
               )}
             </div>
           )}
         </div>
+        {copyState === 'failed' && (
+          <p role="alert" style={{ color: 'var(--error)', fontSize: '0.8125rem', margin: '0.5rem 0 0' }}>
+            Couldn't copy to the clipboard - this browser blocked access.
+          </p>
+        )}
+        {errorMessage && (
+          <p role="alert" style={{ color: 'var(--error)', fontSize: '0.8125rem', margin: '0.5rem 0 0' }}>
+            {errorMessage}
+          </p>
+        )}
       </header>
 
       {consolidated.length > 0 && (
@@ -196,7 +289,7 @@ export function ShoppingListView({ onBack }: ShoppingListViewProps) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {consolidated.map((item) => {
-            const sourceRecipes = [...new Set(item.sources.map((s) => s.recipe_name).filter(Boolean))];
+            const itemRecipes = [...new Set(item.sources.map((s) => s.recipe_name).filter(Boolean))];
             const qty = [item.totalAmount, item.unit].filter(Boolean).join(' ');
             return (
               <Card key={item.key} style={{ padding: '1rem' }}>
@@ -245,9 +338,9 @@ export function ShoppingListView({ onBack }: ShoppingListViewProps) {
                       {qty && <span style={{ fontWeight: 600 }}>{qty} </span>}
                       {item.item}
                     </div>
-                    {sourceRecipes.length > 0 && (
+                    {itemRecipes.length > 0 && (
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                        {sourceRecipes.join(', ')}
+                        {itemRecipes.join(', ')}
                       </div>
                     )}
                   </div>

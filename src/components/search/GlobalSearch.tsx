@@ -7,11 +7,19 @@ interface GlobalSearchProps {
   onSelectResult: (recipe: Recipe, cookbook: Cookbook) => void;
 }
 
-const MATCH_LABELS: Record<string, string> = {
-  ingredient: 'ingredient',
-  tag: 'tag',
-  description: 'description',
-};
+/**
+ * Explain a non-obvious match ("matched ingredient: garlic"). The label comes
+ * from the field that actually produced matchedText, so it can't pair the
+ * wrong field with the text.
+ */
+function describeMatch(result: RecipeSearchResult): string | null {
+  if (result.matchedOn.includes('name')) return null;
+  if (result.matchedText && result.matchedTextField) {
+    return `matched ${result.matchedTextField}: ${result.matchedText}`;
+  }
+  if (result.matchedOn.includes('description')) return 'matched description';
+  return null;
+}
 
 export function GlobalSearch({ onSelectResult }: GlobalSearchProps) {
   const [query, setQuery] = useState('');
@@ -20,6 +28,7 @@ export function GlobalSearch({ onSelectResult }: GlobalSearchProps) {
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const resultRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useShortcut('nav-search', () => inputRef.current?.focus(), []);
 
@@ -69,16 +78,23 @@ export function GlobalSearch({ onSelectResult }: GlobalSearchProps) {
     onSelectResult(result.recipe, result.cookbook);
   }
 
+  /** Move the keyboard highlight and keep it visible in the scrolling dropdown */
+  function moveHighlight(next: number) {
+    setHighlightIndex(next);
+    resultRefs.current[next]?.scrollIntoView?.({ block: 'nearest' });
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightIndex((prev) => Math.min(prev + 1, results.length - 1));
+      moveHighlight(Math.min(highlightIndex + 1, results.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setHighlightIndex((prev) => Math.max(prev - 1, -1));
-    } else if (e.key === 'Enter' && highlightIndex >= 0 && results[highlightIndex]) {
+      moveHighlight(Math.max(highlightIndex - 1, -1));
+    } else if (e.key === 'Enter' && results.length > 0) {
+      // With nothing highlighted, Enter opens the top result
       e.preventDefault();
-      handleSelect(results[highlightIndex]);
+      handleSelect(results[highlightIndex >= 0 && results[highlightIndex] ? highlightIndex : 0]);
     } else if (e.key === 'Escape') {
       setQuery('');
       inputRef.current?.blur();
@@ -148,11 +164,13 @@ export function GlobalSearch({ onSelectResult }: GlobalSearchProps) {
             </div>
           ) : (
             results.map((result, idx) => {
-              // Explain non-obvious matches ("matched ingredient: garlic")
-              const secondaryMatch = result.matchedOn.find((m) => m !== 'name' && MATCH_LABELS[m]);
+              const matchNote = describeMatch(result);
               return (
                 <button
                   key={result.recipe.id}
+                  ref={(el) => {
+                    resultRefs.current[idx] = el;
+                  }}
                   onClick={() => handleSelect(result)}
                   onMouseEnter={() => setHighlightIndex(idx)}
                   style={{
@@ -171,13 +189,7 @@ export function GlobalSearch({ onSelectResult }: GlobalSearchProps) {
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.125rem' }}>
                     {result.cookbook.title}
-                    {secondaryMatch && !result.matchedOn.includes('name') && (
-                      <>
-                        {' · '}
-                        matched {MATCH_LABELS[secondaryMatch]}
-                        {result.matchedText ? `: ${result.matchedText}` : ''}
-                      </>
-                    )}
+                    {matchNote && ` · ${matchNote}`}
                   </div>
                 </button>
               );
