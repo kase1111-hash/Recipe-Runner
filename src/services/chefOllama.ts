@@ -11,6 +11,7 @@ import type {
 } from '../types';
 import { getPreferences } from '../db';
 import { sanitizeAiResponse } from './utils';
+import { findSubstitutions } from './substitutions';
 
 // ============================================
 // System Prompts
@@ -305,38 +306,65 @@ const COMMON_SUBSTITUTIONS: Record<string, { substitute: string; ratio: string; 
   ],
 };
 
+type OfflineSubstitute = { substitute: string; ratio: string; notes: string };
+
+function formatSubstitutes(name: string, subs: OfflineSubstitute[]): string {
+  const subList = subs
+    .map(s => `• ${s.substitute}: ${s.ratio} (${s.notes})`)
+    .join('\n');
+  return `For ${name}, you can use:\n\n${subList}`;
+}
+
+// Chef's own short list first, then the full offline database the grocery
+// checklist uses (whole-word matching — "butternut squash" is not butter)
+function lookupSubstitutes(item: string): OfflineSubstitute[] | null {
+  const itemLower = item.toLowerCase().trim();
+  if (COMMON_SUBSTITUTIONS[itemLower]) return COMMON_SUBSTITUTIONS[itemLower];
+  const found = findSubstitutions({ item, amount: '', unit: '', optional: false, substitutes: [] });
+  return found && found.substitutes.length > 0 ? found.substitutes : null;
+}
+
+// The ingredient a free-text question is about: "I don't have saffron, …",
+// "what can I substitute for garlic?", "… instead of butter"
+const ASKED_INGREDIENT_PATTERNS: RegExp[] = [
+  /\b(?:don'?t|do not|didn'?t) have (?:any |the |a |an |some |enough )?([a-z][a-z' -]*?)(?=[,.?!;]|\s+(?:what|so|and|but|can|could|for|in)\b|$)/,
+  /\b(?:substitute|substitution|replacement|swap|replace|sub)s? (?:for |of )?(?:the |a |an |some )?([a-z][a-z' -]*?)(?=[,.?!;]|\s+(?:in|with|what|so)\b|$)/,
+  /\binstead of (?:the |a |an |some )?([a-z][a-z' -]*?)(?=[,.?!;]|\s+(?:in|with)\b|$)/,
+  /\b(?:out of|ran out of|run out of) (?:the |a |an |some )?([a-z][a-z' -]*?)(?=[,.?!;]|\s+(?:what|so|and|but|can|could)\b|$)/,
+];
+
+function extractAskedIngredient(messageLower: string): string | null {
+  for (const pattern of ASKED_INGREDIENT_PATTERNS) {
+    const match = pattern.exec(messageLower);
+    const name = match?.[1]?.trim();
+    if (name && !/^(?:it|that|this|one|them)$/.test(name)) return name;
+  }
+  return null;
+}
+
 function getOfflineSubstitution(message: string, ingredients: Ingredient[]): string {
   const messageLower = message.toLowerCase();
 
-  // Try to find the ingredient being asked about
+  // An ingredient of this recipe named in the question
   for (const ingredient of ingredients) {
     const itemLower = ingredient.item.toLowerCase();
+    if (!messageLower.includes(itemLower)) continue;
 
-    if (messageLower.includes(itemLower)) {
-      // Check for exact match in substitutions
-      if (COMMON_SUBSTITUTIONS[itemLower]) {
-        const subs = COMMON_SUBSTITUTIONS[itemLower];
-        const subList = subs
-          .map(s => `• ${s.substitute}: ${s.ratio} (${s.notes})`)
-          .join('\n');
-        return `For ${ingredient.item}, you can use:\n\n${subList}`;
-      }
+    const subs = lookupSubstitutes(ingredient.item);
+    if (subs) return formatSubstitutes(ingredient.item, subs);
 
-      // Check for partial matches
-      for (const [key, subs] of Object.entries(COMMON_SUBSTITUTIONS)) {
-        if (itemLower.includes(key) || key.includes(itemLower)) {
-          const subList = subs
-            .map(s => `• ${s.substitute}: ${s.ratio} (${s.notes})`)
-            .join('\n');
-          return `For ${ingredient.item}, you can use:\n\n${subList}`;
-        }
-      }
-
-      // Check ingredient's built-in substitutes
-      if (ingredient.substitutes.length > 0) {
-        return `The recipe suggests: ${ingredient.substitutes.join(' or ')}`;
-      }
+    // Check ingredient's built-in substitutes
+    if (ingredient.substitutes.length > 0) {
+      return `The recipe suggests: ${ingredient.substitutes.join(' or ')}`;
     }
+  }
+
+  // Otherwise whatever ingredient the question names ("I don't have butter"
+  // when the recipe lists "unsalted butter, softened")
+  const asked = extractAskedIngredient(messageLower);
+  if (asked) {
+    const subs = lookupSubstitutes(asked);
+    if (subs) return formatSubstitutes(asked, subs);
   }
 
   return "I don't have an offline substitution for that ingredient. Please check that Ollama is running for more detailed suggestions.";
