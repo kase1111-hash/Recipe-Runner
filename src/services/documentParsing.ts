@@ -156,6 +156,24 @@ export async function extractTextFromPDF(
 // OCR / Image Processing
 // ============================================
 
+// Tesseract.js (v7) downloads its worker script, WASM core and English
+// language data from cdn.jsdelivr.net unless workerPath/corePath/langPath are
+// set. The app's CSP (script-src 'self', connect-src localhost only) blocks
+// those downloads, and they are unavailable offline, so a failure while the
+// engine is loading almost always means this — say so instead of echoing
+// Tesseract's raw rejection (often a bare string, or nothing at all).
+export const OCR_UNAVAILABLE_MESSAGE =
+  "Couldn't read text from this image. Image text recognition (OCR) needs to download its engine " +
+  'and language data, which is blocked in this app or unavailable offline. ' +
+  'Paste the recipe text instead, or upload a PDF with selectable text.';
+
+/** Tesseract rejects with strings (or undefined) rather than Error objects */
+function describeOcrError(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error.trim()) return error.trim();
+  return 'the OCR engine stopped unexpectedly';
+}
+
 export async function extractTextFromImage(
   file: File,
   onProgress?: (progress: DocumentParseProgress) => void
@@ -165,6 +183,9 @@ export async function extractTextFromImage(
     message: 'Loading image...',
     progress: 5,
   });
+
+  // Which phase failed decides the message: engine download vs. recognition
+  let phase: 'reading' | 'loading-engine' | 'recognizing' = 'reading';
 
   try {
     // Convert file to data URL for Tesseract
@@ -176,11 +197,19 @@ export async function extractTextFromImage(
       progress: 10,
     });
 
+    phase = 'loading-engine';
     const Tesseract = await ensureTesseract();
 
     // Perform OCR using Tesseract.js
     const result = await Tesseract.recognize(imageUrl, 'eng', {
+      // Without an errorHandler Tesseract also rethrows every rejection as an
+      // uncaught error inside its message handler; the promise still rejects
+      errorHandler: () => {},
       logger: (info: { status: string; progress: number }) => {
+        // Engine and language data are in place once the API has initialized
+        if (info.status === 'recognizing text' || (info.status === 'initializing api' && info.progress === 1)) {
+          phase = 'recognizing';
+        }
         if (info.status === 'recognizing text') {
           const progressPercent = 10 + Math.round(info.progress * 85);
           onProgress?.({
@@ -229,13 +258,17 @@ export async function extractTextFromImage(
       confidence,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const detail = describeOcrError(error);
+    console.warn(`OCR failed while ${phase}:`, error);
+    const message = phase === 'loading-engine'
+      ? OCR_UNAVAILABLE_MESSAGE
+      : `OCR processing failed: ${detail}`;
     onProgress?.({
       stage: 'error',
-      message: `OCR failed: ${errorMessage}`,
+      message,
       progress: 0,
     });
-    throw new Error(`OCR processing failed: ${errorMessage}`);
+    throw new Error(message);
   }
 }
 
