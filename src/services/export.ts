@@ -360,8 +360,35 @@ export function downloadAsFile(content: string, filename: string, mimeType: stri
   URL.revokeObjectURL(url);
 }
 
-export function copyToClipboard(content: string): Promise<void> {
-  return navigator.clipboard.writeText(content);
+// navigator.clipboard only exists in secure contexts (https or localhost), so
+// a phone opening the app by LAN IP falls back to execCommand. Rejects when
+// neither path works — callers should surface that to the user.
+export async function copyToClipboard(content: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(content);
+      return;
+    } catch {
+      // Permission denied or document not focused — try the fallback
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = content;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } finally {
+    document.body.removeChild(textarea);
+  }
+  if (!copied) {
+    throw new Error('Clipboard is not available');
+  }
 }
 
 export function shareContent(title: string, text: string): Promise<void> {
