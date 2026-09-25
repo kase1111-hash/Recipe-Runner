@@ -66,7 +66,7 @@ export function RecipeDetail({ recipe, onStartCooking, onBack }: RecipeDetailPro
 
   const handleCopyRecipe = async () => {
     try {
-      const content = exportRecipe(recipe, { format: 'text' });
+      const content = exportRecipe(recipe, { format: 'text', includeNotes: true });
       await copyToClipboard(content);
       setExportMessage({ text: 'Copied to clipboard!', isError: false });
     } catch {

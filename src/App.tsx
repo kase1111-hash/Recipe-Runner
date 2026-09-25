@@ -768,6 +768,7 @@ function App() {
             <ErrorBoundary resetLabel="Close Scaler" onReset={handleCancelScaling}>
               <RecipeScaler
                 recipe={state.baseRecipe ?? state.selectedRecipe}
+                appliedYield={state.baseRecipe ? state.selectedRecipe.yield : undefined}
                 onApply={handleApplyScaling}
                 onCancel={handleCancelScaling}
               />
