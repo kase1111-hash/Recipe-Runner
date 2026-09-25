@@ -19,6 +19,9 @@ interface StepExecutorProps {
   onOpenChef: (stepIndex?: number) => void;
   onBack: () => void;
   initialStepIndex?: number;
+  // Reports the step being cooked so the app can resume it after the user
+  // leaves the executor (Exit, browser Back) and comes back
+  onStepChange?: (stepIndex: number) => void;
 }
 
 export function StepExecutor({
@@ -28,6 +31,7 @@ export function StepExecutor({
   onOpenChef,
   onBack,
   initialStepIndex = 0,
+  onStepChange,
 }: StepExecutorProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(() =>
     clampStepIndex(initialStepIndex, recipe.steps.length)
@@ -69,6 +73,10 @@ export function StepExecutor({
       // Session save is best-effort
     });
   }, [currentStepIndex, recipe.id, recipe.cookbook_id, recipe.steps.length, checkedIngredients]);
+
+  useEffect(() => {
+    onStepChange?.(currentStepIndex);
+  }, [currentStepIndex, onStepChange]);
 
   // Swipe navigation for mobile
   const touchStartX = useRef<number | null>(null);

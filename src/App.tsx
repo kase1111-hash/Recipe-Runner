@@ -406,6 +406,10 @@ function App() {
     dispatch({ type: 'BACK_TO_LIBRARY' });
   }, []);
 
+  const handleCookingStepChange = useCallback((stepIndex: number) => {
+    dispatch({ type: 'SET_COOKING_STEP', stepIndex });
+  }, []);
+
   // Ctrl+H — inert in the editor for the same reason Escape is: it would
   // silently discard an in-progress recipe
   const handleHomeShortcut = useCallback(() => {
@@ -722,6 +726,7 @@ function App() {
             <ErrorBoundary resetLabel="Back to Recipe" onReset={handleBackToDetail}>
               <GroceryChecklist
                 recipe={state.selectedRecipe}
+                initialChecked={state.checkedIngredients}
                 onComplete={handleGroceriesComplete}
                 onBack={handleBackToDetail}
                 onOpenChef={handleOpenChefForIngredient}
@@ -749,6 +754,7 @@ function App() {
                 onOpenChef={handleOpenChef}
                 onBack={handleBackToGroceries}
                 initialStepIndex={state.resumeStepIndex}
+                onStepChange={handleCookingStepChange}
               />
             </ErrorBoundary>
           )}
